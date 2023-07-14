@@ -63,8 +63,8 @@ transform = transforms.Compose([
 ])
 
 # Carregar o conjunto de dados de treinamento e teste
-train_dataset = torchvision.datasets.ImageFolder(root=r'/home/emarinho/workspace/programs/pytorch/FirstStepsPytorch/images', transform=transform)
-test_dataset = torchvision.datasets.ImageFolder(root=r'/home/emarinho/workspace/programs/pytorch/FirstStepsPytorch/images', transform=transform)
+train_dataset = torchvision.datasets.ImageFolder(root=r'./images', transform=transform)
+test_dataset = torchvision.datasets.ImageFolder(root=r'./images', transform=transform)
 
 # Criar os dataloaders para facilitar o carregamento dos dados em lotes durante o treinamento
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
