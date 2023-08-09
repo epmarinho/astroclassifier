@@ -7,6 +7,10 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+import visdom
+from utils import Visualizer
+
+viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 nmaxpool = 2
 img_width = 256
@@ -93,7 +97,7 @@ print("device = ", device)
 model.to(device)
 
 # Função de treinamento
-def train(model, dataloader, criterion, optimizer, num_epochs):
+def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
     model.train()  # Configurar o modelo para o modo de treinamento
 
     for epoch in range(num_epochs):
@@ -112,8 +116,13 @@ def train(model, dataloader, criterion, optimizer, num_epochs):
 
             running_loss += loss.item() * images.size(0)
 
+
+        if epoch % 10 == 0 and epoch > 0:
+            test(model, test_loader)
+
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
+        viz.plot_lines('batch loss', running_loss)
 
 predicted_labels = []
 
@@ -139,13 +148,15 @@ def test(model, dataloader):
 
     accuracy = 100 * correct / total
     print(f'Accuracy: {accuracy:.2f}%')
+    viz.plot_lines('test acuracy', accuracy)
 
 # Mover o modelo para o dispositivo GPU antes do treinamento
 model.to(device)
 
 # Treinamento e teste da CNN
-train(model, train_loader, criterion, optimizer, num_epochs)
 test(model, test_loader)
+train(model, train_loader, test_loader, criterion, optimizer, num_epochs)
+
 
 unique_labels = set(predicted_labels)
 print("unique labels: ", unique_labels)
