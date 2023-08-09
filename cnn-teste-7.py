@@ -1,3 +1,5 @@
+# Author: Eraldo Pereira Marinho with a little help from chatGPT
+
 import matplotlib.pyplot as plt
 import array
 import torch
@@ -15,6 +17,12 @@ img_out_height = img_height // nmaxpool // nmaxpool
 # Definir a arquitetura da CNN
 class CNN(nn.Module):
     def __init__(self, num_classes=5):
+        # 0 -> galaxies
+        # 1 -> globular clusters
+        # 2 -> nebulae
+        # 3 -> open clusters
+        # 4 -> others
+
         super(CNN, self).__init__()
         # camadas convolutivas
         self.features = nn.Sequential(
