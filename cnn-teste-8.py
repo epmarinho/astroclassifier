@@ -1,3 +1,5 @@
+# Author: Eraldo Pereira Marinho with some help from Davi Duarte
+
 import matplotlib.pyplot as plt
 import array
 import torch
@@ -8,7 +10,7 @@ import torchvision.transforms as transforms
 import visdom
 from utils import Visualizer
 
-viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=True)
+viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 nmaxpool = 2
 img_width = 64
@@ -19,6 +21,12 @@ img_out_height = img_height // nmaxpool // nmaxpool
 # Definir a arquitetura da CNN
 class CNN(nn.Module):
     def __init__(self, num_classes=5):
+        # 0 -> galaxies
+        # 1 -> globular clusters
+        # 2 -> nebulae
+        # 3 -> open clusters
+        # 4 -> others
+
         super(CNN, self).__init__()
         # camadas convolutivas
         self.features = nn.Sequential(
@@ -52,7 +60,7 @@ class CNN(nn.Module):
         return x
 
 # Parâmetros de treinamento
-num_epochs = 40
+num_epochs = 28
 batch_size = 32
 learning_rate = 0.001
 
@@ -67,8 +75,8 @@ transform = transforms.Compose([
 ])
 
 # Carregar o conjunto de dados de treinamento e teste
-train_dataset = torchvision.datasets.ImageFolder(root=r'./images', transform=transform)
-test_dataset = torchvision.datasets.ImageFolder(root=r'./images', transform=transform)
+train_dataset = torchvision.datasets.ImageFolder(root=r'./images/train', transform=transform)
+test_dataset = torchvision.datasets.ImageFolder(root=r'./images/tests', transform=transform)
 
 # Criar os dataloaders para facilitar o carregamento dos dados em lotes durante o treinamento
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -89,7 +97,7 @@ print("device = ", device)
 model.to(device)
 
 # Função de treinamento
-def train(model, dataloader, criterion, optimizer, num_epochs):
+def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
     model.train()  # Configurar o modelo para o modo de treinamento
 
     for epoch in range(num_epochs):
@@ -107,6 +115,10 @@ def train(model, dataloader, criterion, optimizer, num_epochs):
             optimizer.step()
 
             running_loss += loss.item() * images.size(0)
+
+
+        if epoch % 5 == 0: # and epoch > 0:
+            test(model, test_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
@@ -142,8 +154,9 @@ def test(model, dataloader):
 model.to(device)
 
 # Treinamento e teste da CNN
+train(model, train_loader, test_loader, criterion, optimizer, num_epochs)
 test(model, test_loader)
-train(model, train_loader, criterion, optimizer, num_epochs)
+
 
 unique_labels = set(predicted_labels)
 print("unique labels: ", unique_labels)

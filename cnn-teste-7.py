@@ -1,4 +1,4 @@
-# Author: Eraldo Pereira Marinho with a little help from chatGPT
+# Author: Eraldo Pereira Marinho with some help from Davi Duarte
 
 import matplotlib.pyplot as plt
 import array
@@ -60,7 +60,7 @@ class CNN(nn.Module):
         return x
 
 # Parâmetros de treinamento
-num_epochs = 40
+num_epochs = 28
 batch_size = 32
 learning_rate = 0.001
 
@@ -75,8 +75,8 @@ transform = transforms.Compose([
 ])
 
 # Carregar o conjunto de dados de treinamento e teste
-train_dataset = torchvision.datasets.ImageFolder(root=r'./images', transform=transform)
-test_dataset = torchvision.datasets.ImageFolder(root=r'./images', transform=transform)
+train_dataset = torchvision.datasets.ImageFolder(root=r'./images/train', transform=transform)
+test_dataset = torchvision.datasets.ImageFolder(root=r'./images/tests', transform=transform)
 
 # Criar os dataloaders para facilitar o carregamento dos dados em lotes durante o treinamento
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -117,7 +117,7 @@ def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
             running_loss += loss.item() * images.size(0)
 
 
-        if epoch % 10 == 0 and epoch > 0:
+        if epoch % 5 == 0: # and epoch > 0:
             test(model, test_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
@@ -154,8 +154,8 @@ def test(model, dataloader):
 model.to(device)
 
 # Treinamento e teste da CNN
-test(model, test_loader)
 train(model, train_loader, test_loader, criterion, optimizer, num_epochs)
+test(model, test_loader)
 
 
 unique_labels = set(predicted_labels)
