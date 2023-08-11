@@ -5,6 +5,10 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+import visdom
+from utils import Visualizer
+
+viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=True)
 
 nmaxpool = 2
 img_width = 64
@@ -106,6 +110,7 @@ def train(model, dataloader, criterion, optimizer, num_epochs):
 
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
+        viz.plot_lines('batch loss', running_loss)
 
 predicted_labels = []
 
@@ -131,13 +136,14 @@ def test(model, dataloader):
 
     accuracy = 100 * correct / total
     print(f'Accuracy: {accuracy:.2f}%')
+    viz.plot_lines('test acuracy', accuracy)
 
 # Mover o modelo para o dispositivo GPU antes do treinamento
 model.to(device)
 
 # Treinamento e teste da CNN
-train(model, train_loader, criterion, optimizer, num_epochs)
 test(model, test_loader)
+train(model, train_loader, criterion, optimizer, num_epochs)
 
 unique_labels = set(predicted_labels)
 print("unique labels: ", unique_labels)
