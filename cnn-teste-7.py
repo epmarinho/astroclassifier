@@ -50,6 +50,9 @@ class CNN(nn.Module):
             nn.Linear(512, 512),
             nn.Dropout(),
             nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.Dropout(),
+            nn.ReLU(),
             nn.Linear(512, num_classes),
         )
 
@@ -60,7 +63,7 @@ class CNN(nn.Module):
         return x
 
 # Parâmetros de treinamento
-num_epochs = 28
+num_epochs = 40
 batch_size = 32
 learning_rate = 0.001
 
@@ -116,13 +119,12 @@ def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
 
             running_loss += loss.item() * images.size(0)
 
-
-        if epoch % 5 == 0: # and epoch > 0:
+        if epoch % 2 == 0: # and epoch > 0:
             test(model, test_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
-        viz.plot_lines('batch loss', running_loss)
+        viz.plot_lines('batch loss', epoch_loss)
 
 predicted_labels = []
 
@@ -156,7 +158,6 @@ model.to(device)
 # Treinamento e teste da CNN
 train(model, train_loader, test_loader, criterion, optimizer, num_epochs)
 test(model, test_loader)
-
 
 unique_labels = set(predicted_labels)
 print("unique labels: ", unique_labels)
