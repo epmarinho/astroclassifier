@@ -141,7 +141,8 @@ def test(model, dataloader):
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
 
-            predicted_labels.extend(predicted.tolist())
+            if (predicted != labels).sum().item():
+                predicted_labels.extend(predicted.tolist())
 
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
