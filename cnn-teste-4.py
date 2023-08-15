@@ -10,8 +10,8 @@ from utils import Visualizer
 viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 nmaxpool = 6
-img_width = 384
-img_height = 384
+img_width = 512
+img_height = 512
 img_out_width = img_width // 2**nmaxpool
 img_out_height = img_height // 2**nmaxpool
 
@@ -62,7 +62,13 @@ class CNN(nn.Module):
             nn.Linear(512, 256),
             nn.Dropout(),
             nn.ReLU(),
-            nn.Linear(256, num_classes),
+            nn.Linear(256, 128),
+            nn.Dropout(),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.Dropout(),
+            nn.ReLU(),
+            nn.Linear(64, num_classes),
         )
 
     def forward(self, x):
@@ -72,7 +78,7 @@ class CNN(nn.Module):
         return x
 
 # Parâmetros de treinamento
-num_epochs = 80
+num_epochs = 120
 batch_size = 32
 learning_rate = 0.001
 
@@ -126,14 +132,14 @@ def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
 
             running_loss += loss.item() * images.size(0)
 
-        if epoch % 2 == 0: # and epoch > 0:
+        if epoch % 10 == 0:
             test(model, test_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
-        viz.plot_lines('batch loss', running_loss)
+        viz.plot_lines('batch loss', epoch_loss)
 
-predicted_labels = []
+correct_labels = []
 
 # Função de teste
 def test(model, dataloader):
@@ -149,8 +155,9 @@ def test(model, dataloader):
 
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
-
-            predicted_labels.extend(predicted.tolist())
+            # Introduzido em 14 de agosto de 2023:
+            if (predicted != labels).sum().item():
+                correct_labels.extend(predicted.tolist())
 
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
@@ -166,10 +173,10 @@ model.to(device)
 train(model, train_loader, test_loader, criterion, optimizer, num_epochs)
 test(model, test_loader)
 
-unique_labels = set(predicted_labels)
+unique_labels = set(correct_labels)
 print("unique labels: ", unique_labels)
 label_to_idx = {label: idx for idx, label in enumerate(unique_labels)}
-indices = [label_to_idx[label] for label in predicted_labels]
+indices = [label_to_idx[label] for label in correct_labels]
 # print("índices: ", indices)
 
 label_counts = torch.bincount(torch.tensor(indices))

@@ -9,7 +9,7 @@ from utils import Visualizer
 
 viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
-nmaxpool = 2
+nmaxpool = 1
 img_width = 256
 img_height = 256
 img_out_width = img_width // 2**nmaxpool
@@ -24,7 +24,7 @@ class CNN(nn.Module):
             # bloco convolutivo 1
             nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+            # nn.MaxPool2d(kernel_size=2, stride=2),
 
             # bloco convolutivo 2
             nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
@@ -145,7 +145,8 @@ def test(model, dataloader):
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
 
-            predicted_labels.extend(predicted.tolist())
+            if (predicted == labels).sum().item() > 0:
+                predicted_labels.extend(predicted.tolist())
 
             total += labels.size(0)
             correct += (predicted == labels).sum().item()

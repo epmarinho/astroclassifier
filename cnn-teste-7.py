@@ -32,28 +32,34 @@ class CNN(nn.Module):
         self.features = nn.Sequential(
             # bloco convolutivo 1
             nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1),
+            nn.Dropout(.2),
             nn.ReLU(),
             # bloco convolutivo 2
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
+            nn.Dropout(.2),
             nn.ReLU(),
             # bloco convolutivo 3
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
+            nn.Dropout(.2),
             nn.ReLU(),
         )
         # camadas densas
         self.classifier = nn.Sequential(
             nn.Linear(64 * img_out_width * img_out_height, 512),
-            nn.Dropout(),
+            nn.Dropout(.25),
             nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.Dropout(),
+            nn.Linear(512, 256),
+            nn.Dropout(.25),
             nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.Dropout(),
+            nn.Linear(256, 128),
+            nn.Dropout(.25),
             nn.ReLU(),
-            nn.Linear(512, num_classes),
+            nn.Linear(128, 64),
+            nn.Dropout(.25),
+            nn.ReLU(),
+            nn.Linear(64, num_classes),
         )
 
     def forward(self, x):
@@ -143,7 +149,8 @@ def test(model, dataloader):
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
 
-            predicted_labels.extend(predicted.tolist())
+            if (predicted == labels).sum().item():
+                predicted_labels.extend(predicted.tolist())
 
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
