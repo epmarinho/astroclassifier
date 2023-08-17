@@ -15,8 +15,14 @@ viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 nmaxpool = 2
 img_width = 64
 img_height = 64
-img_out_width = img_width // nmaxpool // nmaxpool
-img_out_height = img_height // nmaxpool // nmaxpool
+img_out_width = img_width // 2 ** nmaxpool
+img_out_height = img_height // 2 ** nmaxpool
+nk1 = 16
+nk2 = 32
+nk3 = 64
+nw1 = 1024
+nw2 = 512
+nw3 = 256
 
 # Definir a arquitetura da CNN
 class CNN(nn.Module):
@@ -30,27 +36,38 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
         # camadas convolutivas
         self.features = nn.Sequential(
+
             # bloco convolutivo 1
-            nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(3, nk1, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
             # bloco convolutivo 2
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(nk1, nk2, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
             # bloco convolutivo 3
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(nk2, nk3, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
+            #nn.MaxPool2d(kernel_size=2, stride=2),
         )
         # camadas densas
         self.classifier = nn.Sequential(
-            nn.Linear(64 * img_out_width * img_out_height, 512),
+
+            nn.Linear(nk3 * img_out_width * img_out_height, nw1),
             nn.Dropout(),
             nn.ReLU(),
-            nn.Linear(512, 512),
+
+            nn.Linear(nw1, nw2),
             nn.Dropout(),
             nn.ReLU(),
-            nn.Linear(512, num_classes),
+
+            nn.Linear(nw2, nw3),
+            nn.Dropout(),
+            nn.ReLU(),
+
+            nn.Linear(nw3, num_classes),
         )
 
     def forward(self, x):
@@ -60,7 +77,7 @@ class CNN(nn.Module):
         return x
 
 # Parâmetros de treinamento
-num_epochs = 28
+num_epochs = 40
 batch_size = 32
 learning_rate = 0.001
 
@@ -116,7 +133,6 @@ def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
 
             running_loss += loss.item() * images.size(0)
 
-
         if epoch % 2 == 0: # and epoch > 0:
             test(model, test_loader)
 
@@ -141,8 +157,7 @@ def test(model, dataloader):
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
 
-            if (predicted != labels).sum().item():
-                predicted_labels.extend(predicted.tolist())
+            predicted_labels.extend(predicted.tolist())
 
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
@@ -157,7 +172,6 @@ model.to(device)
 # Treinamento e teste da CNN
 train(model, train_loader, test_loader, criterion, optimizer, num_epochs)
 test(model, test_loader)
-
 
 unique_labels = set(predicted_labels)
 print("unique labels: ", unique_labels)

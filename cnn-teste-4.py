@@ -78,7 +78,7 @@ class CNN(nn.Module):
         return x
 
 # Parâmetros de treinamento
-num_epochs = 120
+num_epochs = 40
 batch_size = 32
 learning_rate = 0.001
 
@@ -139,7 +139,7 @@ def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
         viz.plot_lines('batch loss', epoch_loss)
 
-correct_labels = []
+predicted_labels = []
 
 # Função de teste
 def test(model, dataloader):
@@ -155,9 +155,8 @@ def test(model, dataloader):
 
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
-            # Introduzido em 14 de agosto de 2023:
-            if (predicted != labels).sum().item():
-                correct_labels.extend(predicted.tolist())
+
+            predicted_labels.extend(predicted.tolist())
 
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
@@ -173,10 +172,10 @@ model.to(device)
 train(model, train_loader, test_loader, criterion, optimizer, num_epochs)
 test(model, test_loader)
 
-unique_labels = set(correct_labels)
+unique_labels = set(predicted_labels)
 print("unique labels: ", unique_labels)
 label_to_idx = {label: idx for idx, label in enumerate(unique_labels)}
-indices = [label_to_idx[label] for label in correct_labels]
+indices = [label_to_idx[label] for label in predicted_labels]
 # print("índices: ", indices)
 
 label_counts = torch.bincount(torch.tensor(indices))
