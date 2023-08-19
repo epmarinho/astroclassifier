@@ -15,8 +15,8 @@ viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 nmaxpool = 2
 img_width = 256
 img_height = 256
-img_out_width = img_width // nmaxpool // nmaxpool
-img_out_height = img_height // nmaxpool // nmaxpool
+img_out_width = img_width // 2**nmaxpool
+img_out_height = img_height // 2**nmaxpool
 
 # Definir a arquitetura da CNN
 class CNN(nn.Module):
@@ -28,6 +28,7 @@ class CNN(nn.Module):
         # 4 -> others
 
         super(CNN, self).__init__()
+
         # camadas convolutivas
         self.features = nn.Sequential(
             # bloco convolutivo 1
@@ -47,20 +48,26 @@ class CNN(nn.Module):
             nn.Dropout(.2),
             nn.ReLU(),
         )
+
         # camadas densas
         self.classifier = nn.Sequential(
+            # dense block 1
             nn.Linear(64 * img_out_width * img_out_height, 512),
             nn.Dropout(.25),
             nn.ReLU(),
+            # dense block 2
             nn.Linear(512, 256),
             nn.Dropout(.25),
             nn.ReLU(),
+            # dense block 3
             nn.Linear(256, 128),
             nn.Dropout(.25),
             nn.ReLU(),
+            # dense block 4
             nn.Linear(128, 64),
             nn.Dropout(.25),
             nn.ReLU(),
+            # dense block 5
             nn.Linear(64, num_classes),
         )
 
@@ -80,7 +87,7 @@ transform = transforms.Compose([
     transforms.RandomRotation(10),                # Randomly rotate the image by up to 10 degrees
     transforms.RandomHorizontalFlip(),           # Randomly flip the image horizontally
     transforms.Resize((img_width, img_height)),
-    # transforms.RandomCrop(size=32, padding=4),   # Randomly crop the image to size 32x32 with padding of 4 pixels
+    transforms.RandomCrop(size=img_height, padding=4),   # Randomly crop the image with padding of 4 pixels
     transforms.ToTensor(),                        # Convert the image to a PyTorch tensor
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize the image tensor
 ])

@@ -87,7 +87,7 @@ transform = transforms.Compose([
     transforms.RandomRotation(10),                # Randomly rotate the image by up to 10 degrees
     transforms.RandomHorizontalFlip(),           # Randomly flip the image horizontally
     transforms.Resize((img_width, img_height)),
-    # transforms.RandomCrop(size=32, padding=4),   # Randomly crop the image to size 32x32 with padding of 4 pixels
+    transforms.RandomCrop(size=img_height, padding=4),   # Randomly crop the image to size 32x32 with padding of 4 pixels
     transforms.ToTensor(),                        # Convert the image to a PyTorch tensor
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize the image tensor
 ])
@@ -132,7 +132,7 @@ def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
 
             running_loss += loss.item() * images.size(0)
 
-        if epoch % 10 == 0:
+        if epoch % 2 == 0:
             test(model, test_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
