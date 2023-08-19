@@ -117,5 +117,5 @@ predicted_class_index = torch.argmax(output).item()
 # Replace 'class_labels' with your actual class labels
 class_labels = ['galaxies', 'globular clusters', 'nebulae', 'open clusters', 'others']
 
-# Print the predicted class
-print(f"Predicted class: {class_labels[predicted_class_index]}")
+# Print the inferred class
+print(f"Inferred class: {class_labels[predicted_class_index]}")
