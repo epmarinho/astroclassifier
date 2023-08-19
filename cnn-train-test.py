@@ -7,17 +7,17 @@ import torchvision.transforms as transforms
 import visdom
 from utils import Visualizer
 
-viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
+vis = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 nmaxpool = 6
-img_width = 256
-img_height = 256
+img_width = 512
+img_height = 512
 img_out_width = img_width // 2**nmaxpool
 img_out_height = img_height // 2**nmaxpool
 
 # Definir a arquitetura da CNN
 class CNN(nn.Module):
-    def __init__(self, num_classes=5):
+    def __init__(self, num_classes=4):
         super(CNN, self).__init__()
         self.features = nn.Sequential(
 
@@ -79,7 +79,7 @@ class CNN(nn.Module):
         return x
 
 # Parâmetros de treinamento
-num_epochs = 240
+num_epochs = 80
 batch_size = 32
 learning_rate = 0.001
 
@@ -138,7 +138,7 @@ def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
 
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
-        viz.plot_lines('batch loss', epoch_loss)
+        vis.plot_lines('batch loss', epoch_loss)
 
 predicted_labels = []
 
@@ -164,7 +164,7 @@ def test(model, dataloader):
 
     accuracy = 100 * correct / total
     print(f'Accuracy: {accuracy:.2f}%')
-    viz.plot_lines('test acuracy', accuracy)
+    vis.plot_lines('test acuracy', accuracy)
 
 # Mover o modelo para o dispositivo GPU antes do treinamento
 model.to(device)

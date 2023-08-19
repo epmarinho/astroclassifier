@@ -6,8 +6,8 @@ from utils import Visualizer  # You should import your Visualizer module here
 
 # Parameters
 num_classes = 4
-img_width = 256
-img_height = 256
+img_width = 512
+img_height = 512
 nmaxpool = 6
 img_out_width = img_width // (2 ** nmaxpool)
 img_out_height = img_height // (2 ** nmaxpool)
