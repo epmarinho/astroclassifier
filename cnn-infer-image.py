@@ -4,80 +4,17 @@ import torchvision.transforms as transforms
 from PIL import Image
 from utils import Visualizer  # You should import your Visualizer module here
 
-# Parameters
-num_classes = 4
-img_width = 512
-img_height = 512
-nmaxpool = 6
-img_out_width = img_width // (2 ** nmaxpool)
-img_out_height = img_height // (2 ** nmaxpool)
-
-
-# Definir a arquitetura da CNN
-class CNN(nn.Module):
-    def __init__(self, num_classes=num_classes):
-        super(CNN, self).__init__()
-        self.features = nn.Sequential(
-
-            # bloco convolutivo 1
-            nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            # bloco convolutivo 2
-            nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            # bloco convolutivo 3
-            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            # bloco convolutivo 4
-            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            # bloco convolutivo 5
-            nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            # bloco convolutivo 6
-            nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-        )
-        # camadas densas
-        expected_flattened_size = 512 * img_out_width * img_out_height
-        self.classifier = nn.Sequential(
-            nn.Linear(expected_flattened_size, 1024),
-            nn.Dropout(),
-            nn.ReLU(),
-            nn.Linear(1024, 512),
-            nn.Dropout(),
-            nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.Dropout(),
-            nn.ReLU(),
-            nn.Linear(256, 128),
-            nn.Dropout(),
-            nn.ReLU(),
-            nn.Linear(128, 64),
-            nn.Dropout(),
-            nn.ReLU(),
-            nn.Linear(64, num_classes),
-        )
-
-    def forward(self, x):
-        x = self.features(x)
-        x = x.view(x.size(0), -1)
-        x = self.classifier(x)
-        return x
+# hyperparameters
+import hyperparms
+nmaxpool = hyperparms.nmaxpool
+img_width = hyperparms.img_width
+img_height = hyperparms.img_height
+img_out_width = hyperparms.img_out_width
+img_out_height = hyperparms.img_out_height
+num_classes = hyperparms.num_classes
 
 # Create an instance of the CNN model
-loaded_model = CNN(num_classes=num_classes)
+loaded_model = hyperparms.CNN(num_classes=num_classes)
 
 # Load the saved model parameters
 saved_model_path = 'trained_cnn_model.pth'
@@ -98,7 +35,7 @@ transform = transforms.Compose([
 ])
 
 # Load a sample image for inference
-sample_image_path = 'images/opo1038b.jpg'  # Replace with the actual path
+sample_image_path = 'images/pexels-photo-816608.jpeg'  # Replace with the actual path
 print(sample_image_path)
 sample_image = Image.open(sample_image_path).convert("RGB")
 input_image = transform(sample_image).unsqueeze(0)  # Add an extra dimension for the batch

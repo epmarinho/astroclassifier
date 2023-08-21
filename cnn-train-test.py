@@ -9,79 +9,18 @@ from utils import Visualizer
 
 vis = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
-nmaxpool = 6
-img_width = 512
-img_height = 512
-img_out_width = img_width // 2**nmaxpool
-img_out_height = img_height // 2**nmaxpool
-
-# Definir a arquitetura da CNN
-class CNN(nn.Module):
-    def __init__(self, num_classes=4):
-        super(CNN, self).__init__()
-        self.features = nn.Sequential(
-
-            # bloco convolutivo 1
-            nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            # bloco convolutivo 2
-            nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            # bloco convolutivo 3
-            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            # bloco convolutivo 4
-            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            # bloco convolutivo 5
-            nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            # bloco convolutivo 6
-            nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-        )
-        # camadas densas
-        expected_flattened_size = 512 * img_out_width * img_out_height
-        self.classifier = nn.Sequential(
-            nn.Linear(expected_flattened_size, 1024),
-            nn.Dropout(),
-            nn.ReLU(),
-            nn.Linear(1024, 512),
-            nn.Dropout(),
-            nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.Dropout(),
-            nn.ReLU(),
-            nn.Linear(256, 128),
-            nn.Dropout(),
-            nn.ReLU(),
-            nn.Linear(128, 64),
-            nn.Dropout(),
-            nn.ReLU(),
-            nn.Linear(64, num_classes),
-        )
-
-    def forward(self, x):
-        x = self.features(x)
-        x = x.view(x.size(0), -1)
-        x = self.classifier(x)
-        return x
+# hyperparameters
+import hyperparms
+nmaxpool = hyperparms.nmaxpool
+img_width = hyperparms.img_width
+img_height = hyperparms.img_height
+img_out_width = hyperparms.img_out_width
+img_out_height = hyperparms.img_out_height
 
 # Parâmetros de treinamento
-num_epochs = 80
-batch_size = 32
-learning_rate = 0.001
+num_epochs = hyperparms.num_epochs
+batch_size = hyperparms.batch_size
+learning_rate = hyperparms.learning_rate
 
 # Transformações de pré-processamento para redimensionar e normalizar as imagens
 transform = transforms.Compose([
@@ -102,7 +41,7 @@ train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # Instanciar a CNN
-model = CNN(num_classes=len(train_dataset.classes))
+model = hyperparms.CNN(num_classes=len(train_dataset.classes))
 
 # Definir a função de perda e o otimizador
 criterion = nn.CrossEntropyLoss()
@@ -176,7 +115,7 @@ test(model, test_loader)
 # Save the trained model
 saved_model_path = 'trained_cnn_model.pth'
 torch.save(model.state_dict(), saved_model_path)
-print(f"model.state_dict '{model.state_dict()}'")
+# print(f"model.state_dict '{model.state_dict()}'")
 print(f"Trained model saved to '{saved_model_path}'")
 
 # plot the histogram for predicted categories - unbalanced histogram means low quality training
