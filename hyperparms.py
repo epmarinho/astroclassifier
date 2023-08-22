@@ -8,7 +8,7 @@ img_out_width = img_width // 2**nmaxpool
 img_out_height = img_height // 2**nmaxpool
 
 # Parâmetros de treinamento
-num_epochs = 80
+num_epochs = 200
 batch_size = 32
 learning_rate = 0.00001
 
@@ -62,7 +62,7 @@ class CNN(nn.Module):
             nn.Dropout(),
             nn.ReLU(),
 
-            nn.Linear(256, 128),
+            nn.Linear(256, 256),
             nn.Dropout(),
             nn.ReLU(),
 
@@ -74,7 +74,7 @@ class CNN(nn.Module):
             # nn.Dropout(),
             # nn.ReLU(),
 
-            nn.Linear(128, num_classes),
+            nn.Linear(256, num_classes),
         )
 
     def forward(self, x):
