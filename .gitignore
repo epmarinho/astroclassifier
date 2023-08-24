@@ -163,3 +163,4 @@ cython_debug/
 #.idea/
 
 ./trained_cnn_model.pth
+trained_cnn_model.pth

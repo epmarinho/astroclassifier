@@ -35,7 +35,7 @@ transform = transforms.Compose([
 ])
 
 # Load a sample image for inference
-sample_image_path = 'images/960x0.webp'  # Replace with the actual path
+sample_image_path = 'images/your-astrophoto-skills.jpg'  # Replace with the actual path
 print(sample_image_path)
 sample_image = Image.open(sample_image_path).convert("RGB")
 input_image = transform(sample_image).unsqueeze(0)  # Add an extra dimension for the batch
