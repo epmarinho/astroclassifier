@@ -1,3 +1,7 @@
+# Author: Eraldo Pereira Marinho, Ph.D.
+# Collaborator: Davi Duarte with introduction of visdom facilities to visualize the training curves.
+# Last modification: 24 Aug 2023
+
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
