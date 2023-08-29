@@ -10,11 +10,10 @@ import torchvision
 import torchvision.transforms as transforms
 import visdom
 from utils import Visualizer
+import hyperparms
 
 vis = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
-# hyperparameters
-import hyperparms
 nmaxpool = hyperparms.nmaxpool
 img_width = hyperparms.img_width
 img_height = hyperparms.img_height

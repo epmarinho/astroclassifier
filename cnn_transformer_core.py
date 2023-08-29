@@ -9,7 +9,7 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import torchvision
 import torchvision.transforms as transforms
 
-nmaxpool = 2
+nmaxpool = 3
 img_width = 384
 img_height = 384
 img_out_width = img_width // 2**nmaxpool
@@ -48,14 +48,30 @@ num_heads = 8
 # Define a classe do modelo CNN + Transformer
 class CNNTransformer(nn.Module):
     # def __init__(self, cnn_model, transformer_layers, num_classes):
-    def __init__(self, cnn_model):
+    def __init__(self, cnn_model, num_dense_layers=1):
         super(CNNTransformer, self).__init__()
         self.cnn_model = cnn_model
         self.transformer = TransformerEncoder(
             TransformerEncoderLayer(d_model=embedding_dimension, nhead=num_heads),
             num_layers=transformer_layers
         )
-        self.fc = nn.Linear(embedding_dimension, num_classes)
+
+        # Adding additional dense layers
+        dense_layers = []
+        input_size = embedding_dimension  # Adjust if necessary
+        output_size_1 = 256
+        output_size_2 = 128
+
+        for _ in range(num_dense_layers):
+            dense_layers.append(nn.Linear(input_size, output_size_1))
+            dense_layers.append(nn.ReLU())
+            input_size = output_size_1
+
+        dense_layers.append(nn.Linear(output_size_1, output_size_2))
+        dense_layers.append(nn.ReLU())
+        input_size = output_size_2
+        self.dense_layers = nn.Sequential(*dense_layers)
+        self.fc = nn.Linear(output_size_2, num_classes)
 
     def forward(self, x):
         features = self.cnn_model(x)
@@ -65,12 +81,14 @@ class CNNTransformer(nn.Module):
         transformed_features = self.transformer(features)
         transformed_features = transformed_features.permute(1, 2, 0)  # Reshape back
         transformed_features = transformed_features.contiguous().view(transformed_features.size(0), -1)
+        transformed_features = self.dense_layers(transformed_features)
         output = self.fc(transformed_features)
         return output
 
 cnn_n_out_1 = 16
 cnn_n_out_2 = 32
 cnn_n_out_3 = 64
+cnn_n_out_4 = 32
 dense_l_1 = 512
 dense_l_2 = 256
 dense_l_3 = 128
@@ -92,18 +110,18 @@ class CNN(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),
 
             # bloco convolutivo 3
-            # nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
-            # nn.ReLU(),
-            # nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(cnn_n_out_2, cnn_n_out_3, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
 
             # bloco convolutivo 4
-            # nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            # nn.Conv2d(cnn_n_out_3, cnn_n_out_4, kernel_size=3, stride=1, padding=1),
             # nn.ReLU(),
             # nn.MaxPool2d(kernel_size=2, stride=2),
         )
 
         # camadas densas
-        expected_flattened_size = cnn_n_out_2 * img_out_width * img_out_height
+        expected_flattened_size = cnn_n_out_3 * img_out_width * img_out_height
         self.classifier = nn.Sequential(
 
             nn.Linear(expected_flattened_size, dense_l_1),
@@ -126,7 +144,7 @@ class CNN(nn.Module):
         return x
 
 # Instanciar a CNN + Transformer
-# cnn_model = hyperparms.CNN(num_classes=len(train_dataset.classes))
-cnn_model = CNN()
 # model = CNNTransformer(cnn_model, transformer_layers, num_classes=len(train_dataset.classes))
+cnn_model = CNN()
 model = CNNTransformer(cnn_model)
+

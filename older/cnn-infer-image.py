@@ -3,9 +3,8 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 from PIL import Image
 from utils import Visualizer  # You should import your Visualizer module here
-
-# hyperparameters
 import hyperparms
+
 nmaxpool = hyperparms.nmaxpool
 img_width = hyperparms.img_width
 img_height = hyperparms.img_height
