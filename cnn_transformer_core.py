@@ -40,10 +40,10 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, s
 
 # Parâmetros das redes
 num_classes = 4
-transformer_layers = 4
+transformer_layers = 3
 cnn_pre_classification = 256
 embedding_dimension = cnn_pre_classification
-num_heads = 8
+num_heads = 4
 
 # Define a classe do modelo CNN + Transformer
 class CNNTransformer(nn.Module):
@@ -59,8 +59,8 @@ class CNNTransformer(nn.Module):
         # Adding additional dense layers
         dense_layers = []
         input_size = embedding_dimension  # Adjust if necessary
-        output_size_1 = 256
-        output_size_2 = 128
+        output_size_1 = 128
+        output_size_2 = 64
 
         for _ in range(num_dense_layers):
             dense_layers.append(nn.Linear(input_size, output_size_1))
@@ -133,8 +133,8 @@ class CNN(nn.Module):
             nn.ReLU(),
 
             nn.Linear(dense_l_2, cnn_pre_classification),
-            nn.Dropout(.5),
-            nn.ReLU(),
+            # nn.Dropout(.5),
+            # nn.ReLU(),
         )
 
     def forward(self, x):
@@ -146,5 +146,5 @@ class CNN(nn.Module):
 # Instanciar a CNN + Transformer
 # model = CNNTransformer(cnn_model, transformer_layers, num_classes=len(train_dataset.classes))
 cnn_model = CNN()
-model = CNNTransformer(cnn_model)
+model = CNNTransformer(cnn_model, 2)
 
