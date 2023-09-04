@@ -26,7 +26,7 @@ transform = transforms.Compose([
 ])
 
 # Parâmetros de treinamento
-num_epochs = 60
+num_epochs = 80
 batch_size = 32
 learning_rate = 0.0001
 
@@ -39,11 +39,10 @@ train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # Parâmetros das redes
-num_classes = 4
-transformer_layers = 3
+transformer_layers = 4
 cnn_pre_classification = 256
 embedding_dimension = cnn_pre_classification
-num_heads = 4
+num_heads = 8
 
 # Define a classe do modelo CNN + Transformer
 class CNNTransformer(nn.Module):
@@ -128,11 +127,12 @@ class CNN(nn.Module):
             nn.Dropout(.5),
             nn.ReLU(),
 
-            nn.Linear(dense_l_1, dense_l_2),
-            nn.Dropout(.5),
-            nn.ReLU(),
-
-            nn.Linear(dense_l_2, cnn_pre_classification),
+            # nn.Linear(dense_l_1, dense_l_2),
+            nn.Linear(dense_l_1, cnn_pre_classification)
+            # nn.Dropout(.5),
+            # nn.ReLU(),
+            #
+            # nn.Linear(dense_l_2, cnn_pre_classification),
             # nn.Dropout(.5),
             # nn.ReLU(),
         )
@@ -145,6 +145,7 @@ class CNN(nn.Module):
 
 # Instanciar a CNN + Transformer
 # model = CNNTransformer(cnn_model, transformer_layers, num_classes=len(train_dataset.classes))
+num_classes = len(train_dataset.classes)
 cnn_model = CNN()
 model = CNNTransformer(cnn_model, 2)
 
