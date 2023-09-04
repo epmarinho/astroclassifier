@@ -26,7 +26,7 @@ transform = transforms.Compose([
 ])
 
 # Parâmetros de treinamento
-num_epochs = 120
+num_epochs = 50
 batch_size = 32
 learning_rate = 0.0001
 
@@ -147,5 +147,5 @@ class CNN(nn.Module):
 # model = CNNTransformer(cnn_model, transformer_layers, num_classes=len(train_dataset.classes))
 num_classes = len(train_dataset.classes)
 cnn_model = CNN()
-model = CNNTransformer(cnn_model, 2)
+model = CNNTransformer(cnn_model)
 
