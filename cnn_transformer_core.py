@@ -9,7 +9,7 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import torchvision
 import torchvision.transforms as transforms
 
-nmaxpool = 2
+nmaxpool = 3
 img_width = 384
 img_height = 384
 img_out_width = img_width // 2**nmaxpool
@@ -25,14 +25,14 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize the image tensor
 ])
 
+# Carregar o conjunto de dados de treinamento e teste
+train_dataset = torchvision.datasets.ImageFolder(root=r'images/train', transform=transform)
+test_dataset = torchvision.datasets.ImageFolder(root=r'images/tests', transform=transform)
+
 # Parâmetros de treinamento
 num_epochs = 50
 batch_size = 32
 learning_rate = 0.0001
-
-# Carregar o conjunto de dados de treinamento e teste
-train_dataset = torchvision.datasets.ImageFolder(root=r'images/train', transform=transform)
-test_dataset = torchvision.datasets.ImageFolder(root=r'images/tests', transform=transform)
 
 # Criar os dataloaders para facilitar o carregamento dos dados em lotes durante o treinamento
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -109,9 +109,9 @@ class CNN(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),
 
             # bloco convolutivo 3
-            # nn.Conv2d(cnn_n_out_2, cnn_n_out_3, kernel_size=3, stride=1, padding=1),
-            # nn.ReLU(),
-            # nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(cnn_n_out_2, cnn_n_out_3, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
 
             # bloco convolutivo 4
             # nn.Conv2d(cnn_n_out_3, cnn_n_out_4, kernel_size=3, stride=1, padding=1),
@@ -120,20 +120,20 @@ class CNN(nn.Module):
         )
 
         # camadas densas
-        expected_flattened_size = cnn_n_out_2 * img_out_width * img_out_height
+        expected_flattened_size = cnn_n_out_3 * img_out_width * img_out_height
         self.classifier = nn.Sequential(
 
             nn.Linear(expected_flattened_size, dense_l_1),
-            nn.Dropout(.5),
+            nn.Dropout(p=.15),
             nn.ReLU(),
 
             # nn.Linear(dense_l_1, dense_l_2),
-            nn.Linear(dense_l_1, cnn_pre_classification)
-            # nn.Dropout(.5),
-            # nn.ReLU(),
+            nn.Linear(dense_l_1, cnn_pre_classification),
+            nn.Dropout(p=.15),
+            nn.ReLU(),
             #
             # nn.Linear(dense_l_2, cnn_pre_classification),
-            # nn.Dropout(.5),
+            # nn.Dropout(p=.15),
             # nn.ReLU(),
         )
 
