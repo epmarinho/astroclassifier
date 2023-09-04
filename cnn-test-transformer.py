@@ -12,8 +12,10 @@ import torchvision.transforms as transforms
 from PIL import Image
 from utils import Visualizer  # You should import your Visualizer module here
 import os
+# from cnn_transformer_core import img_width as imgw
+# from cnn_transformer_core import img_height as imgh
 from cnn_transformer_core import model as loaded_model
-# from cnn_transformer_core import transform
+from cnn_transformer_core import transform
 
 # Load the saved model parameters
 saved_model_path = 'trained_cnn_model.pth'
@@ -26,12 +28,12 @@ loaded_model.to(device)
 # Set the model to evaluation mode
 loaded_model.eval()
 
-# # Transformations for preprocessing the input image
-transform = transforms.Compose([
-    transforms.Resize((img_width, img_height)),
-    transforms.ToTensor(),                        # Convert the image to a PyTorch tensor
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize the image tensor
-])
+# # Transformations for preprocessing the input image - it might be different from transform within cnn_transformer_core
+# transform = transforms.Compose([
+#     transforms.Resize((imgw, imgh)),
+#     transforms.ToTensor(),                        # Convert the image to a PyTorch tensor
+#     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize the image tensor
+# ])
 
 # Replace 'class_labels' with your actual class labels
 class_labels = ['galaxies', 'globular clusters', 'nebulae', 'open clusters']

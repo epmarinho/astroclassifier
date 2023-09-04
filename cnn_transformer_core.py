@@ -26,7 +26,7 @@ transform = transforms.Compose([
 ])
 
 # Parâmetros de treinamento
-num_epochs = 80
+num_epochs = 120
 batch_size = 32
 learning_rate = 0.0001
 
@@ -39,8 +39,8 @@ train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # Parâmetros das redes
-transformer_layers = 4
-cnn_pre_classification = 256
+transformer_layers = 1
+cnn_pre_classification = 512
 embedding_dimension = cnn_pre_classification
 num_heads = 8
 

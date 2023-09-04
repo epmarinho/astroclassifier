@@ -16,12 +16,23 @@ from cnn_transformer_core import learning_rate
 from cnn_transformer_core import train_loader
 from cnn_transformer_core import test_loader
 from cnn_transformer_core import num_epochs
+import os
 
 viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Definir a função de perda e o otimizador
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+# Verifique se o arquivo pré-treinado existe
+model_checkpoint = "trained_cnn_model.pth"
+if os.path.exists(model_checkpoint):
+    # Carregue os pesos pré-treinados
+    checkpoint = torch.load(model_checkpoint)
+    model.load_state_dict(checkpoint)
+    print("Pesos pré-treinados carregados com sucesso.")
+else:
+    print("Nenhum arquivo de pesos pré-treinados encontrado. Inicializando com pesos padrão do PyTorch.")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
