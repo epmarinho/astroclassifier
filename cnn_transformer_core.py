@@ -9,7 +9,7 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import torchvision
 import torchvision.transforms as transforms
 
-nmaxpool = 3
+nmaxpool = 2
 img_width = 384
 img_height = 384
 img_out_width = img_width // 2**nmaxpool
@@ -109,9 +109,9 @@ class CNN(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),
 
             # bloco convolutivo 3
-            nn.Conv2d(cnn_n_out_2, cnn_n_out_3, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+            # nn.Conv2d(cnn_n_out_2, cnn_n_out_3, kernel_size=3, stride=1, padding=1),
+            # nn.ReLU(),
+            # nn.MaxPool2d(kernel_size=2, stride=2),
 
             # bloco convolutivo 4
             # nn.Conv2d(cnn_n_out_3, cnn_n_out_4, kernel_size=3, stride=1, padding=1),
@@ -120,21 +120,22 @@ class CNN(nn.Module):
         )
 
         # camadas densas
-        expected_flattened_size = cnn_n_out_3 * img_out_width * img_out_height
+        dropout = .15
+        expected_flattened_size = cnn_n_out_2 * img_out_width * img_out_height
         self.classifier = nn.Sequential(
 
             nn.Linear(expected_flattened_size, dense_l_1),
-            nn.Dropout(p=.15),
+            nn.Dropout(p=dropout),
             nn.ReLU(),
 
-            # nn.Linear(dense_l_1, dense_l_2),
-            nn.Linear(dense_l_1, cnn_pre_classification),
-            nn.Dropout(p=.15),
+            nn.Linear(dense_l_1, dense_l_2),
+            # nn.Linear(dense_l_1, cnn_pre_classification),
+            nn.Dropout(p=dropout),
             nn.ReLU(),
-            #
-            # nn.Linear(dense_l_2, cnn_pre_classification),
-            # nn.Dropout(p=.15),
-            # nn.ReLU(),
+
+            nn.Linear(dense_l_2, cnn_pre_classification),
+            nn.Dropout(p=dropout),
+            nn.ReLU(),
         )
 
     def forward(self, x):
