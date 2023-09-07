@@ -164,3 +164,4 @@ cython_debug/
 
 ./trained_cnn_model.pth
 trained_cnn_model.pth
+astroclassifier.kdev4
