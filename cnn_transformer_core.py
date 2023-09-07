@@ -44,11 +44,12 @@ batch_size = 32
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-# Parâmetros da rede Transformer Encoder
-transformer_layers = 2 # número de camadas de atenção do Transformer Encoder
 cnn_pre_classification = 512 # este é o número de classes intermediárias como saída do modelo CNN
+
+# Parâmetros do Transformer Encoder
+transformer_layers = 5 # número de camadas de atenção do Transformer Encoder
 embedding_dimension = cnn_pre_classification # dimensão do espaço de recursos, que é uma dimensão importante para a atenção
-num_heads = 8 # número de cabeças de atenção
+num_heads = 16 # número de cabeças de atenção deve ser divisor inteiro de embedding_dimension
 
 # Define a classe do modelo CNN + Transformer
 # para classificação de imagens, uma camada Decoder não é necessária. O Encoder do Transformer é usado para extrair recursos úteis da imagem
