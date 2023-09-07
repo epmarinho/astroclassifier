@@ -10,41 +10,50 @@ import torchvision
 import torchvision.transforms as transforms
 
 nmaxpool = 2
-img_width = 384
-img_height = 384
+img_width = 256
+img_height = 256
 img_out_width = img_width // 2**nmaxpool
 img_out_height = img_height // 2**nmaxpool
 
-# Transformações de pré-processamento para redimensionar e normalizar as imagens
-transform = transforms.Compose([
-    transforms.RandomRotation(10),                # Randomly rotate the image by up to 10 degrees
+# Transformações de pré-processamento para redimensionar e normalizar as imagens de treinamento
+transform_train = transforms.Compose([
+    transforms.RandomRotation(30),                # Randomly rotate the image by up to 30 degrees
     transforms.RandomHorizontalFlip(),           # Randomly flip the image horizontally
     transforms.Resize((img_width, img_height)),
-    transforms.RandomCrop(size=img_height, padding=4),   # Randomly crop the image to size img_height with padding of 4 pixels
+    transforms.RandomCrop(size=(img_width, img_height), padding=4),  # Crop to img_width*img_height with padding 4
+    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1), # Randomly adjusts brightness, contrast, saturation, and hue.
     transforms.ToTensor(),                        # Convert the image to a PyTorch tensor
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize the image tensor
 ])
 
-# Carregar o conjunto de dados de treinamento e teste
-train_dataset = torchvision.datasets.ImageFolder(root=r'images/train', transform=transform)
-test_dataset = torchvision.datasets.ImageFolder(root=r'images/tests', transform=transform)
+# Transformações de pré-processamento para redimensionar e normalizar as imagens de verificação
+transform_test = transforms.Compose([
+    transforms.Resize((img_width, img_height)),
+    transforms.ToTensor(),                        # Convert the image to a PyTorch tensor
+    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize the image tensor
+])
 
-# Parâmetros de treinamento
-num_epochs = 50
-batch_size = 32
-learning_rate = 0.0001
+# Carregar o conjunto de dados de treinamento
+train_dataset = torchvision.datasets.ImageFolder(root=r'images/train', transform=transform_train)
+
+# Carregar o conjunto de dados de teste
+test_dataset = torchvision.datasets.ImageFolder(root=r'images/tests', transform=transform_test)
 
 # Criar os dataloaders para facilitar o carregamento dos dados em lotes durante o treinamento
+batch_size = 32
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-# Parâmetros das redes
-transformer_layers = 1
-cnn_pre_classification = 512
-embedding_dimension = cnn_pre_classification
-num_heads = 8
+# Parâmetros da rede Transformer Encoder
+transformer_layers = 2 # número de camadas de atenção do Transformer Encoder
+cnn_pre_classification = 512 # este é o número de classes intermediárias como saída do modelo CNN
+embedding_dimension = cnn_pre_classification # dimensão do espaço de recursos, que é uma dimensão importante para a atenção
+num_heads = 8 # número de cabeças de atenção
 
 # Define a classe do modelo CNN + Transformer
+# para classificação de imagens, uma camada Decoder não é necessária. O Encoder do Transformer é usado para extrair recursos úteis da imagem
+# e as camadas de classificação subsequentes são usadas para fazer a predição das classes. Este é um design adequado para tarefas de
+# classificação de imagem, incluindo a classificação de imagens astronômicas
 class CNNTransformer(nn.Module):
     # def __init__(self, cnn_model, transformer_layers, num_classes):
     def __init__(self, cnn_model, num_dense_layers=1):
@@ -55,7 +64,7 @@ class CNNTransformer(nn.Module):
             num_layers=transformer_layers
         )
 
-        # Adding additional dense layers
+        # Adding additional dense layers for classification after CNN Transformer
         dense_layers = []
         input_size = embedding_dimension  # Adjust if necessary
         output_size_1 = 128
@@ -92,18 +101,18 @@ dense_l_1 = 512
 dense_l_2 = 256
 dense_l_3 = 128
 
-# Definir a arquitetura da CNN
+# Definir a arquitetura da CNN para extração de features
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
         self.features = nn.Sequential(
 
-            # bloco convolutivo 1
+            # bloco convolutivo 1 - saída maxpool tem metade das dimensões lineares da imagem de entrada redimensionada
             nn.Conv2d(3, cnn_n_out_1, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),
 
-            # bloco convolutivo 2
+            # bloco convolutivo 2 - saída maxpool tem 1/4 das dimensões lineares da imagem de entrada redimensionada
             nn.Conv2d(cnn_n_out_1, cnn_n_out_2, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),
@@ -119,7 +128,7 @@ class CNN(nn.Module):
             # nn.MaxPool2d(kernel_size=2, stride=2),
         )
 
-        # camadas densas
+        # camadas densas para pré-classificação a ser usada como ebbeding dimension do Transformer
         dropout = .15
         expected_flattened_size = cnn_n_out_2 * img_out_width * img_out_height
         self.classifier = nn.Sequential(
