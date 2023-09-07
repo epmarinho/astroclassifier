@@ -1,23 +1,42 @@
+# Author: Eraldo Pereira Marinho, Ph.D
+# About: the code imports cnn_transformer_core to allow Transformer+CNN to classify astronomical images
+# Creation: Aug 29, 2023
+
 import torch
 import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import matplotlib.pyplot as plt
 import torch.optim as optim
 import torchvision
-import torchvision.transforms as transforms
+# import torchvision.transforms as transforms
 import visdom
 from utils import Visualizer
 from cnn_transformer_core import model
-from cnn_transformer_core import learning_rate
+# from cnn_transformer_core import learning_rate
 from cnn_transformer_core import train_loader
 from cnn_transformer_core import test_loader
-from cnn_transformer_core import num_epochs
+# from cnn_transformer_core import num_epochs
+import os
 
 viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
+
+# Parâmetros de treinamento
+num_epochs = 40
+learning_rate = 0.0001
 
 # Definir a função de perda e o otimizador
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+# Verifique se o arquivo pré-treinado existe
+model_checkpoint = "trained_cnn_model.pth"
+if os.path.exists(model_checkpoint):
+    # Carregue os pesos pré-treinados
+    checkpoint = torch.load(model_checkpoint)
+    model.load_state_dict(checkpoint)
+    print("Pesos pré-treinados carregados com sucesso.")
+else:
+    print("Nenhum arquivo de pesos pré-treinados encontrado. Inicializando com pesos padrão do PyTorch.")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -40,6 +59,11 @@ def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
             outputs = model(images)
             loss = criterion(outputs, labels)
             loss.backward()
+
+            # Clip gradients
+            max_norm = 2.0  # Set your desired maximum gradient norm here
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm)
+
             optimizer.step()
 
             running_loss += loss.item() * images.size(0)
