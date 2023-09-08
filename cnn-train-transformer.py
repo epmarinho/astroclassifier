@@ -1,6 +1,6 @@
 # Author: Eraldo Pereira Marinho, Ph.D
 # About: the code imports cnn_transformer_core to allow Transformer+CNN to classify astronomical images
-# Creation: Aug 29, 2023
+# Creation: Jul 12, 2023
 
 import torch
 import torch.nn as nn
@@ -17,6 +17,7 @@ from cnn_transformer_core import train_loader
 from cnn_transformer_core import test_loader
 # from cnn_transformer_core import num_epochs
 import os
+import torch.nn.init as init
 
 viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
@@ -37,8 +38,15 @@ if os.path.exists(model_checkpoint):
     print("Pesos pré-treinados carregados com sucesso.")
 else:
     print("Nenhum arquivo de pesos pré-treinados encontrado. Inicializando com pesos padrão do PyTorch.")
+    # Inicialização de He em PyTorch
+    # Acesse todas as camadas lineares (fully connected) em seu modelo
+    # Certifique-se de que o modelo contém apenas camadas que devem ser inicializadas com He
+    # for layer in model.children():
+    #     if isinstance(layer, nn.Linear):
+    #         init.kaiming_normal_(layer.weight)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"pytorch device: {device}")
 
 # Mover o modelo para o dispositivo GPU
 model.to(device)
@@ -61,10 +69,16 @@ def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
             loss.backward()
 
             # Clip gradients
-            max_norm = 2.0  # Set your desired maximum gradient norm here
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm)
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm = 1.0)
 
             optimizer.step()
+
+            # Imprima ou registre os gradientes das camadas intermediárias
+            # for name, param in model.named_parameters():
+            #     if param.requires_grad and 'weight' in name:
+            #         grdnorm = param.grad.norm().item()
+            #         if grdnorm < 0.01:
+            #             print(f'Layer: {name}, Grad norm: {grdnorm}')
 
             running_loss += loss.item() * images.size(0)
 

@@ -1,5 +1,5 @@
 # Author: Eraldo Pereira Marinho, Ph.D
-# About: the code is a core module to build a transformer-supported CNN originally design to classify astronomical images
+# About: the code is a core module to build a VGG like CNN with transformer, originally design to classify astronomical images
 # Creation: Aug 29, 2023
 # Usage, import cnn_transformer_core and its components therein
 
@@ -8,8 +8,9 @@ import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import torchvision
 import torchvision.transforms as transforms
+import torch.nn.functional as F
 
-nmaxpool = 2
+nmaxpool = 3
 img_width = 256
 img_height = 256
 img_out_width = img_width // 2**nmaxpool
@@ -47,7 +48,7 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, s
 cnn_pre_classification = 512 # este é o número de classes intermediárias como saída do modelo CNN
 
 # Parâmetros do Transformer Encoder
-transformer_layers = 5 # número de camadas de atenção do Transformer Encoder
+transformer_layers = 2 # número de camadas de atenção do Transformer Encoder
 embedding_dimension = cnn_pre_classification # dimensão do espaço de recursos, que é uma dimensão importante para a atenção
 num_heads = 16 # número de cabeças de atenção deve ser divisor inteiro de embedding_dimension
 
@@ -61,7 +62,7 @@ class CNNTransformer(nn.Module):
         super(CNNTransformer, self).__init__()
         self.cnn_model = cnn_model
         self.transformer = TransformerEncoder(
-            TransformerEncoderLayer(d_model=embedding_dimension, nhead=num_heads),
+            TransformerEncoderLayer(d_model=embedding_dimension, nhead=num_heads, activation=F.gelu),
             num_layers=transformer_layers
         )
 
@@ -98,9 +99,9 @@ cnn_n_out_1 = 16
 cnn_n_out_2 = 32
 cnn_n_out_3 = 64
 cnn_n_out_4 = 32
-dense_l_1 = 512
+dense_l_1 = 128
 dense_l_2 = 256
-dense_l_3 = 128
+dense_l_3 = 512
 
 # Definir a arquitetura da CNN para extração de features
 class CNN(nn.Module):
@@ -111,17 +112,20 @@ class CNN(nn.Module):
             # bloco convolutivo 1 - saída maxpool tem metade das dimensões lineares da imagem de entrada redimensionada
             nn.Conv2d(3, cnn_n_out_1, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
+            nn.BatchNorm2d(cnn_n_out_1),
             nn.MaxPool2d(kernel_size=2, stride=2),
 
             # bloco convolutivo 2 - saída maxpool tem 1/4 das dimensões lineares da imagem de entrada redimensionada
             nn.Conv2d(cnn_n_out_1, cnn_n_out_2, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(cnn_n_out_2),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),
 
             # bloco convolutivo 3
-            # nn.Conv2d(cnn_n_out_2, cnn_n_out_3, kernel_size=3, stride=1, padding=1),
-            # nn.ReLU(),
-            # nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(cnn_n_out_2, cnn_n_out_3, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(cnn_n_out_3),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
 
             # bloco convolutivo 4
             # nn.Conv2d(cnn_n_out_3, cnn_n_out_4, kernel_size=3, stride=1, padding=1),
@@ -131,7 +135,7 @@ class CNN(nn.Module):
 
         # camadas densas para pré-classificação a ser usada como ebbeding dimension do Transformer
         dropout = .15
-        expected_flattened_size = cnn_n_out_2 * img_out_width * img_out_height
+        expected_flattened_size = cnn_n_out_3 * img_out_width * img_out_height
         self.classifier = nn.Sequential(
 
             nn.Linear(expected_flattened_size, dense_l_1),
@@ -158,5 +162,5 @@ class CNN(nn.Module):
 # model = CNNTransformer(cnn_model, transformer_layers, num_classes=len(train_dataset.classes))
 num_classes = len(train_dataset.classes)
 cnn_model = CNN()
-model = CNNTransformer(cnn_model)
+model = CNNTransformer(cnn_model, 2)
 
