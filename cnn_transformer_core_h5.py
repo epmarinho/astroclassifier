@@ -63,7 +63,8 @@ num_heads = 8 # número de cabeças de atenção deve ser divisor inteiro de emb
 
 # Definindo a classe do modelo CNN + Transformer
 class CNNTransformer(nn.Module):
-    def __init__(self, cnn_model, num_dense_layers=2):
+    # def __init__(self, cnn_model, num_dense_layers=1):
+    def __init__(self, cnn_model):
         super(CNNTransformer, self).__init__()
         self.cnn_model = cnn_model
 
@@ -73,22 +74,23 @@ class CNNTransformer(nn.Module):
             num_layers=transformer_layers
         )
 
-        # Adicionando camadas densas adicionais para classificação após o CNN Transformer
-        dense_layers = []
-        input_size = embedding_dimension
-        output_size_1 = 128
-        output_size_2 = 64
-
-        for _ in range(num_dense_layers):
-            dense_layers.append(nn.Linear(input_size, output_size_1))
-            dense_layers.append(nn.ReLU())
-            input_size = output_size_1
-
-        dense_layers.append(nn.Linear(output_size_1, output_size_2))
-        dense_layers.append(nn.ReLU())
-        input_size = output_size_2
-        self.dense_layers = nn.Sequential(*dense_layers)
-        self.fc = nn.Linear(output_size_2, num_classes)
+        # Adicionando camadas densas para classificação após o CNN Transformer
+        # dense_layers = []
+        # input_size = embedding_dimension
+        # output_size_1 = 128
+        # output_size_2 = 64
+        #
+        # for _ in range(num_dense_layers):
+        #     dense_layers.append(nn.Linear(input_size, output_size_1))
+        #     dense_layers.append(nn.ReLU())
+        #     input_size = output_size_1
+        #
+        # dense_layers.append(nn.Linear(output_size_1, output_size_2))
+        # dense_layers.append(nn.ReLU())
+        # input_size = output_size_2
+        # self.dense_layers = nn.Sequential(*dense_layers)
+        # self.fc = nn.Linear(output_size_2, num_classes)
+        self.fc = nn.Linear(embedding_dimension, num_classes)
 
     def forward(self, x):
         # Extração de características usando a CNN
@@ -106,7 +108,7 @@ class CNNTransformer(nn.Module):
         transformed_features = transformed_features.contiguous().view(transformed_features.size(0), -1)
 
         # Passagem das características pelo conjunto de camadas densas
-        transformed_features = self.dense_layers(transformed_features)
+        # transformed_features = self.dense_layers(transformed_features)
 
         # Camada final de classificação
         output = self.fc(transformed_features)
@@ -125,7 +127,7 @@ cnn_n_out_3 = 64
 # cnn_n_out_4 = 128
 dense_l_1 = 512
 dense_l_2 = 256
-dense_l_3 = 512
+dense_l_3 = 128
 
 # Definindo a arquitetura da CNN para extração de características
 class CNN(nn.Module):

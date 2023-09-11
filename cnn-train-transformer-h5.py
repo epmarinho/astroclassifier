@@ -27,10 +27,10 @@ print(f"pytorch device: {device}")
 viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Definir o vetor de pesos das classes obtido empiricamente da última execução:
-galaxies = np.float32(1/449)
-globular = np.float32(1/153)
-nebulae  = np.float32(1/213)
-openclust= np.float32(1/80)
+galaxies = np.float32(1/699)
+globular = np.float32(1/325)
+nebulae  = np.float32(1/443)
+openclust= np.float32(1/144)
 norm_denominator=galaxies + globular + nebulae + openclust
 weight_class_0=galaxies/norm_denominator
 weight_class_1=globular/norm_denominator
@@ -43,32 +43,31 @@ print(f"Class weights = {class_weights}")
 class_weights = class_weights.to(device)
 
 # Parâmetros de treinamento
-num_epochs = 40
+num_epochs = 60
 initial_learning_rate = 1e-4 # Valores menores deram pau
 # Definir a função de perda e o otimizador
-weight_decay = 1e-5 # Este é um valor razoável
+weight_decay = 1e-6 # Este é um valor razoável
 criterion = nn.CrossEntropyLoss(weight=class_weights)
 optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=weight_decay)
 # Defina um scheduler para ajustar a taxa de aprendizado
 # Aqui, um scheduler StepLR é usado, que reduz a taxa de aprendizado por um fator gamma após um número fixo de épocas
-# Você pode ajustar o fator gamma e o período conforme necessário
 scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 
 # Verifique se o arquivo pré-treinado existe
-model_checkpoint = "trained_cnn_model.pth"
-if os.path.exists(model_checkpoint):
-    # Carregue os pesos pré-treinados
-    checkpoint = torch.load(model_checkpoint)
-    model.load_state_dict(checkpoint)
-    print("Pesos pré-treinados carregados com sucesso.")
-else:
-    print("Nenhum arquivo de pesos pré-treinados encontrado. Inicializando com pesos padrão do PyTorch.")
-    # Inicialização de He em PyTorch
-    # Acesse todas as camadas lineares (fully connected) em seu modelo
-    # Certifique-se de que o modelo contém apenas camadas que devem ser inicializadas com He
-    # for layer in model.children():
-    #     if isinstance(layer, nn.Linear):
-    #         init.kaiming_normal_(layer.weight)
+# model_checkpoint = "trained_cnn_model.pth"
+# if os.path.exists(model_checkpoint):
+#     # Carregue os pesos pré-treinados
+#     checkpoint = torch.load(model_checkpoint)
+#     model.load_state_dict(checkpoint)
+#     print("Pesos pré-treinados carregados com sucesso.")
+# else:
+#     print("Nenhum arquivo de pesos pré-treinados encontrado. Inicializando com pesos padrão do PyTorch.")
+#     # Inicialização de He em PyTorch
+#     # Acesse todas as camadas lineares (fully connected) em seu modelo
+#     # Certifique-se de que o modelo contém apenas camadas que devem ser inicializadas com He
+#     # for layer in model.children():
+#     #     if isinstance(layer, nn.Linear):
+#     #         init.kaiming_normal_(layer.weight)
 
 # Mover o modelo para o dispositivo GPU
 model.to(device)
@@ -149,10 +148,10 @@ train(model, train_loader, validation_loader, criterion, optimizer, num_epochs)
 test(model, validation_loader)
 
 # Save the trained model
-saved_model_path = 'trained_cnn_model.pth'
-torch.save(model.state_dict(), saved_model_path)
-# print(f"model.state_dict '{model.state_dict()}'")
-print(f"Trained model saved to '{saved_model_path}'")
+# saved_model_path = 'trained_cnn_model.pth'
+# torch.save(model.state_dict(), saved_model_path)
+# # print(f"model.state_dict '{model.state_dict()}'")
+# print(f"Trained model saved to '{saved_model_path}'")
 
 # plot the histogram for predicted categories - unbalanced histogram means low quality training
 unique_labels = set(predicted_labels)
