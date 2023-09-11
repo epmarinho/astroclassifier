@@ -15,7 +15,7 @@ from utils import Visualizer
 from cnn_transformer_core import model
 # from cnn_transformer_core import learning_rate
 from cnn_transformer_core import train_loader
-from cnn_transformer_core import test_loader
+from cnn_transformer_core import validation_loader
 # from cnn_transformer_core import num_epochs
 import os
 import torch.nn.init as init
@@ -74,7 +74,7 @@ else:
 model.to(device)
 
 # Função de treinamento
-def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
+def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
     model.train()  # Configurar o modelo para o modo de treinamento
 
     for epoch in range(num_epochs):
@@ -108,7 +108,7 @@ def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
         scheduler.step()
 
         if epoch % 10 == 0:
-            test(model, test_loader)
+            test(model, validation_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
@@ -145,8 +145,8 @@ def test(model, dataloader):
 model.to(device)
 
 # Treinamento e teste da CNN
-train(model, train_loader, test_loader, criterion, optimizer, num_epochs)
-test(model, test_loader)
+train(model, train_loader, validation_loader, criterion, optimizer, num_epochs)
+test(model, validation_loader)
 
 # Save the trained model
 saved_model_path = 'trained_cnn_model.pth'

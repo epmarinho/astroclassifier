@@ -48,9 +48,9 @@ validation_dataset = torchvision.datasets.ImageFolder(root=r'images/validation',
 # Criar os dataloaders para facilitar o carregamento dos dados em lotes durante o treinamento
 batch_size = 32
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
-cnn_pre_classification = 64 # este é o número de classes intermediárias como saída do modelo CNN
+cnn_pre_classification = 128 # este é o número de classes intermediárias como saída do modelo CNN
 
 # Parâmetros do Transformer Encoder
 transformer_layers = 2 # número de camadas de atenção do Transformer Encoder
@@ -110,7 +110,7 @@ class CNNTransformer(nn.Module):
 
 # Observação:
 """
-# para classificação de imagens, uma camada Decoder não é necessária. O Encoder do Transformer é usado para extrair recursos úteis da imagem
+# Para classificação de imagens, uma camada Decoder não é necessária. O Encoder do Transformer é usado para extrair recursos úteis da imagem
 # e as camadas de classificação subsequentes são usadas para fazer a predição das classes. Este é um design adequado para tarefas de
 # classificação de imagem, incluindo a classificação de imagens astronômicas
 """
