@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import matplotlib.pyplot as plt
 import torch.optim as optim
+from torch.optim import lr_scheduler
 import torchvision
 # import torchvision.transforms as transforms
 import visdom
@@ -18,16 +19,40 @@ from cnn_transformer_core import test_loader
 # from cnn_transformer_core import num_epochs
 import os
 import torch.nn.init as init
+import numpy as np
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"pytorch device: {device}")
 
 viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
-# Parâmetros de treinamento
-num_epochs = 40
-learning_rate = 0.0001
+# Definir o vetor de pesos das classes obtido empiricamente da última execução:
+galaxies = np.float32(1/780)
+globular = np.float32(1/295)
+nebulae  = np.float32(1/409)
+openclust= np.float32(1/147)
+norm_denominator=galaxies + globular + nebulae + openclust
+weight_class_0=galaxies/norm_denominator
+weight_class_1=globular/norm_denominator
+weight_class_2=nebulae/norm_denominator
+weight_class_3=openclust/norm_denominator
+# Instantiate the class weight tensor
+class_weights = torch.tensor([weight_class_0, weight_class_1, weight_class_2, weight_class_3])
+print(f"Class weights = {class_weights}")
+# Weights tensor must be converted to the adopted device
+class_weights = class_weights.to(device)
 
+# Parâmetros de treinamento
+num_epochs = 120
+initial_learning_rate = 1e-4 # Valores menores deram pau
 # Definir a função de perda e o otimizador
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+weight_decay = 1e-5 # Este é um valor razoável
+criterion = nn.CrossEntropyLoss(weight=class_weights)
+optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=weight_decay)
+# Defina um scheduler para ajustar a taxa de aprendizado
+# Aqui, um scheduler StepLR é usado, que reduz a taxa de aprendizado por um fator gamma após um número fixo de épocas
+# Você pode ajustar o fator gamma e o período conforme necessário
+scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 
 # Verifique se o arquivo pré-treinado existe
 model_checkpoint = "trained_cnn_model.pth"
@@ -44,9 +69,6 @@ else:
     # for layer in model.children():
     #     if isinstance(layer, nn.Linear):
     #         init.kaiming_normal_(layer.weight)
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"pytorch device: {device}")
 
 # Mover o modelo para o dispositivo GPU
 model.to(device)
@@ -81,6 +103,9 @@ def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
             #             print(f'Layer: {name}, Grad norm: {grdnorm}')
 
             running_loss += loss.item() * images.size(0)
+
+        # Atualize a taxa de aprendizado com base no scheduler
+        scheduler.step()
 
         if epoch % 10 == 0:
             test(model, test_loader)
