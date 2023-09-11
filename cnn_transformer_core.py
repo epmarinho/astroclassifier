@@ -33,7 +33,7 @@ transform_train = transforms.Compose([
 ])
 
 # Transformações de pré-processamento para redimensionar e normalizar as imagens de verificação
-transform_test = transforms.Compose([
+transform_validation = transforms.Compose([
     transforms.Resize((img_width, img_height)),
     transforms.ToTensor(),                        # Convert the image to a PyTorch tensor
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize the image tensor
@@ -43,12 +43,12 @@ transform_test = transforms.Compose([
 train_dataset = torchvision.datasets.ImageFolder(root=r'images/train', transform=transform_train)
 
 # Carregar o conjunto de dados de teste
-test_dataset = torchvision.datasets.ImageFolder(root=r'images/tests', transform=transform_test)
+validation_dataset = torchvision.datasets.ImageFolder(root=r'images/validation', transform=transform_validation)
 
 # Criar os dataloaders para facilitar o carregamento dos dados em lotes durante o treinamento
 batch_size = 32
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+test_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
 cnn_pre_classification = 64 # este é o número de classes intermediárias como saída do modelo CNN
 
@@ -118,7 +118,7 @@ class CNNTransformer(nn.Module):
 cnn_n_out_1 = 16
 cnn_n_out_2 = 32
 cnn_n_out_3 = 64
-cnn_n_out_4 = 32
+# cnn_n_out_4 = 128
 dense_l_1 = 512
 dense_l_2 = 256
 dense_l_3 = 512

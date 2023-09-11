@@ -39,12 +39,12 @@ transform = transforms.Compose([
 class_labels = ['galaxies', 'globular clusters', 'nebulae', 'open clusters']
 
 # Path to the validation images directory
-validation_dir = 'images/validation'
+validation_dir = 'images/tests'
 
 conte_acertos:int=0
 imagens = os.listdir(validation_dir)
 total_imagens:int = len(imagens)
-print(f"Total de imagens de validação = {total_imagens}")
+print(f"Total de imagens de teste = {total_imagens}")
 
 # Iterate through images in the validation directory
 for filename in os.listdir(validation_dir):

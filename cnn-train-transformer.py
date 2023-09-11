@@ -117,7 +117,7 @@ def train(model, dataloader, test_loader, criterion, optimizer, num_epochs):
 # predicted_labels array is used to construct a histogram to reveal how many times each class was used along the evaluation
 predicted_labels = []
 
-# Função de teste
+# Função de validação
 def test(model, dataloader):
     model.eval()  # Configurar o modelo para o modo de avaliação
     correct = 0
