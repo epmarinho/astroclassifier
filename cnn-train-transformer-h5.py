@@ -43,8 +43,8 @@ print(f"Class weights = {class_weights}")
 class_weights = class_weights.to(device)
 
 # Parâmetros de treinamento
-num_epochs = 60
-initial_learning_rate = 1e-4 # Valores menores deram pau
+num_epochs = 40
+initial_learning_rate = 1e-4 # Valores maiores deram pau
 # Definir a função de perda e o otimizador
 weight_decay = 1e-6 # Este é um valor razoável
 criterion = nn.CrossEntropyLoss(weight=class_weights)
