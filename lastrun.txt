@@ -1,0 +1,6 @@
+Epoch [40/40], Loss: 0.0073
+Accuracy: 84.36%
+Trained model saved to 'trained_cnn_model.pth'
+unique labels:  {0, 1, 2, 3}
+label count:  tensor([294, 147, 196, 258])
+
