@@ -11,7 +11,7 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 import h5py
 
-nmaxpool = 3
+nmaxpool = 4
 img_width = 256
 img_height = 256
 img_out_width = img_width // 2**nmaxpool
@@ -66,6 +66,7 @@ class CNNTransformer(nn.Module):
     def __init__(self,
                  cnn_model,
                  transformer_layers = 2, # número de camadas de atenção do Transformer Encoder
+                 num_dense_layers = 1,
         ):
         super(CNNTransformer, self).__init__()
         self.cnn_model = cnn_model
@@ -77,22 +78,22 @@ class CNNTransformer(nn.Module):
         )
 
         # Adicionando camadas densas para classificação após o CNN Transformer
-        # dense_layers = []
-        # input_size = embedding_dimension
-        # output_size_1 = 128
-        # output_size_2 = 64
-        #
-        # for _ in range(num_dense_layers):
-        #     dense_layers.append(nn.Linear(input_size, output_size_1))
-        #     dense_layers.append(nn.ReLU())
-        #     input_size = output_size_1
-        #
-        # dense_layers.append(nn.Linear(output_size_1, output_size_2))
-        # dense_layers.append(nn.ReLU())
-        # input_size = output_size_2
-        # self.dense_layers = nn.Sequential(*dense_layers)
-        # self.fc = nn.Linear(output_size_2, num_classes)
-        self.fc = nn.Linear(embedding_dimension, num_classes)
+        dense_layers = []
+        input_size = embedding_dimension
+        output_size_1 = 128
+        output_size_2 = 64
+
+        for _ in range(num_dense_layers):
+            dense_layers.append(nn.Linear(input_size, output_size_1))
+            dense_layers.append(nn.ReLU())
+            input_size = output_size_1
+
+        dense_layers.append(nn.Linear(output_size_1, output_size_2))
+        dense_layers.append(nn.ReLU())
+        input_size = output_size_2
+        self.dense_layers = nn.Sequential(*dense_layers)
+        self.fc = nn.Linear(output_size_2, num_classes)
+        # self.fc = nn.Linear(embedding_dimension, num_classes)
 
     def forward(self, x):
         # Extração de características usando a CNN
@@ -110,7 +111,7 @@ class CNNTransformer(nn.Module):
         transformed_features = transformed_features.contiguous().view(transformed_features.size(0), -1)
 
         # Passagem das características pelo conjunto de camadas densas
-        # transformed_features = self.dense_layers(transformed_features)
+        transformed_features = self.dense_layers(transformed_features)
 
         # Camada final de classificação
         output = self.fc(transformed_features)
@@ -126,7 +127,7 @@ class CNNTransformer(nn.Module):
 cnn_n_out_1 = 16
 cnn_n_out_2 = 32
 cnn_n_out_3 = 64
-# cnn_n_out_4 = 128
+cnn_n_out_4 = 128
 dense_l_1 = 512
 dense_l_2 = 256
 dense_l_3 = 128
@@ -142,24 +143,35 @@ class CNN(nn.Module):
             nn.Conv2d(3, cnn_n_out_1, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(cnn_n_out_1),  # Normalização por lotes para estabilizar o treinamento
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),  # Camada de max pooling para reduzir a resolução
+            # nn.MaxPool2d(kernel_size=2, stride=2),  # Camada de max pooling para reduzir a resolução
+            nn.AdaptiveMaxPool2d((img_width // 2, img_height // 2)),
 
             # Bloco convolutivo 2 - saída maxpool tem 1/4 das dimensões lineares da imagem de entrada redimensionada
             nn.Conv2d(cnn_n_out_1, cnn_n_out_2, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(cnn_n_out_2),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+            # nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.AdaptiveMaxPool2d((img_width // 4, img_height // 4)),
 
             # Bloco convolutivo 3
             nn.Conv2d(cnn_n_out_2, cnn_n_out_3, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(cnn_n_out_3),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+            # nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.AdaptiveMaxPool2d((img_width // 8, img_height // 8)),
+
+            # Bloco convolutivo 4
+            nn.Conv2d(cnn_n_out_3, cnn_n_out_4, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(cnn_n_out_4),
+            nn.ReLU(),
+            # nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.AdaptiveMaxPool2d((img_width // 16, img_height // 16)),
+
         )
 
         # Camadas densas para pré-classificação, a serem usadas como dimensão de embedding para o Transformer
         dropout = 0.5
-        expected_flattened_size = cnn_n_out_3 * img_out_width * img_out_height
+        expected_flattened_size = cnn_n_out_4 * img_out_width * img_out_height
 
         self.classifier = nn.Sequential(
             # Primeira camada densa
@@ -194,4 +206,4 @@ class CNN(nn.Module):
 # model = CNNTransformer(cnn_model, transformer_layers, num_classes=len(train_dataset.classes))
 num_classes = len(class_labels)
 cnn_model = CNN()
-model = CNNTransformer(cnn_model, transformer_layers = 2)
+model = CNNTransformer(cnn_model, transformer_layers = 2, num_dense_layers = 0)

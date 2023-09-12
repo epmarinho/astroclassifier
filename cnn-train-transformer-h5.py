@@ -63,7 +63,7 @@ scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 # else:
 #     print("Nenhum arquivo de pesos pré-treinados encontrado. Inicializando com pesos padrão do PyTorch.")
 #     # Inicialização de He em PyTorch
-#     # Acesse todas as camadas lineares (fully connected) em seu modelo
+#     # Acesse todas as camadas lineares (fully connected)
 #     # Certifique-se de que o modelo contém apenas camadas que devem ser inicializadas com He
 #     # for layer in model.children():
 #     #     if isinstance(layer, nn.Linear):
@@ -148,10 +148,10 @@ train(model, train_loader, validation_loader, criterion, optimizer, num_epochs)
 test(model, validation_loader)
 
 # Save the trained model
-# saved_model_path = 'trained_cnn_model.pth'
-# torch.save(model.state_dict(), saved_model_path)
-# # print(f"model.state_dict '{model.state_dict()}'")
-# print(f"Trained model saved to '{saved_model_path}'")
+saved_model_path = 'trained_cnn_model.pth'
+torch.save(model.state_dict(), saved_model_path)
+# print(f"model.state_dict '{model.state_dict()}'")
+print(f"Trained model saved to '{saved_model_path}'")
 
 # plot the histogram for predicted categories - unbalanced histogram means low quality training
 unique_labels = set(predicted_labels)

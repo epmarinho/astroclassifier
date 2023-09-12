@@ -60,6 +60,23 @@ validation_data_root = r'images/validation'
 train_dataset = ImageFolder(root=train_data_root, transform=transform_train)
 validation_dataset = ImageFolder(root=validation_data_root, transform=transform_validation)
 
+# is_normalized = True  # Assume the dataset is normalized
+
+# for image, _ in train_dataset:
+#     min_pixel_value = torch.min(image)
+#     max_pixel_value = torch.max(image)
+
+    # if min_pixel_value != 0.0 or max_pixel_value != 1.0:
+    #     is_normalized = False
+    #     break
+
+# if is_normalized:
+#     print("The images are normalized to [0, 1].")
+# else:
+#     print("The images are not normalized to [0, 1].")
+# print(f" Min pix = {min_pixel_value}, max pix = {max_pixel_value}.")
+
+
 # Get the class labels from the dataset
 class_labels = train_dataset.classes
 
