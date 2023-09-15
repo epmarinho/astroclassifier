@@ -54,20 +54,20 @@ optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_deca
 scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 
 # Verifique se o arquivo pré-treinado existe
-# model_checkpoint = "trained_cnn_model.pth"
-# if os.path.exists(model_checkpoint):
-#     # Carregue os pesos pré-treinados
-#     checkpoint = torch.load(model_checkpoint)
-#     model.load_state_dict(checkpoint)
-#     print("Pesos pré-treinados carregados com sucesso.")
-# else:
-#     print("Nenhum arquivo de pesos pré-treinados encontrado. Inicializando com pesos padrão do PyTorch.")
-#     # Inicialização de He em PyTorch
-#     # Acesse todas as camadas lineares (fully connected)
-#     # Certifique-se de que o modelo contém apenas camadas que devem ser inicializadas com He
-#     # for layer in model.children():
-#     #     if isinstance(layer, nn.Linear):
-#     #         init.kaiming_normal_(layer.weight)
+model_checkpoint = "trained_cnn_model.pth"
+if os.path.exists(model_checkpoint):
+    # Carregue os pesos pré-treinados
+    checkpoint = torch.load(model_checkpoint)
+    model.load_state_dict(checkpoint)
+    print("Pesos pré-treinados carregados com sucesso.")
+else:
+    print("Nenhum arquivo de pesos pré-treinados encontrado. Inicializando com pesos padrão do PyTorch.")
+    # Inicialização de He em PyTorch
+    # Acesse todas as camadas lineares (fully connected)
+    # Certifique-se de que o modelo contém apenas camadas que devem ser inicializadas com He
+    # for layer in model.children():
+    #     if isinstance(layer, nn.Linear):
+    #         init.kaiming_normal_(layer.weight)
 
 # Mover o modelo para o dispositivo GPU
 model.to(device)
@@ -107,7 +107,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
         scheduler.step()
 
         if epoch % 10 == 0:
-            test(model, validation_loader)
+            validate(model, validation_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
@@ -117,7 +117,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
 predicted_labels = []
 
 # Função de validação
-def test(model, dataloader):
+def validate(model, dataloader):
     model.eval()  # Configurar o modelo para o modo de avaliação
     correct = 0
     total = 0
@@ -138,14 +138,14 @@ def test(model, dataloader):
 
     accuracy = 100 * correct / total
     print(f'Accuracy: {accuracy:.2f}%')
-    viz.plot_lines('test acuracy', accuracy)
+    viz.plot_lines('validation acuracy', accuracy)
 
 # Mover o modelo para o dispositivo GPU antes do treinamento
 model.to(device)
 
-# Treinamento e teste da CNN
+# Treinamento e validação da CNN
 train(model, train_loader, validation_loader, criterion, optimizer, num_epochs)
-test(model, validation_loader)
+validate(model, validation_loader)
 
 # Save the trained model
 saved_model_path = 'trained_cnn_model.pth'

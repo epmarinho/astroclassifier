@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import torchvision
 import torchvision.transforms as transforms
 from PIL import Image
+import pillow_avif
 from utils import Visualizer  # You should import your Visualizer module here
 import os
 from cnn_transformer_core import img_width as imgw

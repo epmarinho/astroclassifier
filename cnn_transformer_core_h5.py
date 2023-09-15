@@ -58,13 +58,13 @@ cnn_pre_classification = 128 # este é o número de classes intermediárias como
 
 # Parâmetros do Transformer Encoder
 embedding_dimension = cnn_pre_classification # dimensão do espaço de recursos, que é uma dimensão importante para a atenção
-num_heads = 8 # número de cabeças de atenção deve ser divisor inteiro de embedding_dimension
 
 # Definindo a classe do modelo CNN + Transformer
 class CNNTransformer(nn.Module):
     # def __init__(self, cnn_model, num_dense_layers=1):
     def __init__(self,
                  cnn_model,
+                 num_heads = 16,
                  transformer_layers = 2, # número de camadas de atenção do Transformer Encoder
                  num_dense_layers = 1,
         ):
@@ -80,8 +80,9 @@ class CNNTransformer(nn.Module):
         # Adicionando camadas densas para classificação após o CNN Transformer
         dense_layers = []
         input_size = embedding_dimension
-        output_size_1 = 128
-        output_size_2 = 64
+        output_size_1 = 256
+        output_size_2 = 128
+        assert num_dense_layers > 0, "number of dense layers must be greater than or equal to 1"
 
         for _ in range(num_dense_layers):
             dense_layers.append(nn.Linear(input_size, output_size_1))
@@ -206,4 +207,7 @@ class CNN(nn.Module):
 # model = CNNTransformer(cnn_model, transformer_layers, num_classes=len(train_dataset.classes))
 num_classes = len(class_labels)
 cnn_model = CNN()
-model = CNNTransformer(cnn_model, transformer_layers = 2, num_dense_layers = 0)
+model = CNNTransformer(cnn_model,
+                       num_heads = 16,
+                       transformer_layers = 2,
+                       num_dense_layers = 1)

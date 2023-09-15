@@ -6,9 +6,9 @@
 import torch
 import torch.nn as nn
 import h5py
-from vit_pytorch import ViT
+from vit_pytorch import SimpleViT
 
-nmaxpool = 4
+# nmaxpool = 4
 img_width = 256
 img_height = 256
 
@@ -56,16 +56,14 @@ num_classes = len(class_labels)  # Number of output classes
 class ViTClassifier(nn.Module):
     def __init__(self, num_classes):
         super(ViTClassifier, self).__init__()
-        self.vit_model = ViT(
-            image_size=256,
-            patch_size=32,
+        self.vit_model = SimpleViT(
+            image_size=img_width,
+            patch_size=16,
             num_classes=num_classes,
-            dim=256,
-            depth=2,
+            dim=1024,
+            depth=4,
             heads=8,
-            mlp_dim=512,
-            dropout=0.1,
-            emb_dropout=0.1
+            mlp_dim=2048
         )
 
     def forward(self, x):
