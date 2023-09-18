@@ -11,6 +11,15 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 import h5py
 
+class Swish(nn.Module):
+    def __init__(self, beta=1.0):
+        super(Swish, self).__init__()
+        self.beta = beta
+
+    def forward(self, x):
+        return x * torch.sigmoid(self.beta * x)
+
+
 nmaxpool = 4
 img_width = 256
 img_height = 256
@@ -146,25 +155,29 @@ class CNN(nn.Module):
             # Bloco convolutivo 1 - saída maxpool tem metade das dimensões lineares da imagem de entrada redimensionada
             nn.Conv2d(3, cnn_n_out_1, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(cnn_n_out_1),  # Normalização por lotes para estabilizar o treinamento
-            nn.ReLU(),
+            # nn.ReLU(),
+            Swish(),
             nn.MaxPool2d(kernel_size=2, stride=2),  # Camada de max pooling para reduzir a resolução
 
             # Bloco convolutivo 2 - saída maxpool tem 1/4 das dimensões lineares da imagem de entrada redimensionada
             nn.Conv2d(cnn_n_out_1, cnn_n_out_2, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(cnn_n_out_2),
-            nn.ReLU(),
+            # nn.ReLU(),
+            Swish(),
             nn.MaxPool2d(kernel_size=2, stride=2),
 
             # Bloco convolutivo 3
             nn.Conv2d(cnn_n_out_2, cnn_n_out_3, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(cnn_n_out_3),
-            nn.ReLU(),
+            # nn.ReLU(),
+            Swish(),
             nn.MaxPool2d(kernel_size=2, stride=2),
 
             # Bloco convolutivo 4
             nn.Conv2d(cnn_n_out_3, cnn_n_out_4, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(cnn_n_out_4),
-            nn.ReLU(),
+            # nn.ReLU(),
+            Swish(),
             nn.MaxPool2d(kernel_size=2, stride=2),
 
         )
@@ -177,22 +190,26 @@ class CNN(nn.Module):
             # Primeira camada densa
             nn.Linear(expected_flattened_size, dense_l_1),  # Conecta todas as características a uma camada densa
             nn.Dropout(p=dropout),  # Dropout para evitar overfitting
-            nn.ReLU(),
+            # nn.ReLU(),
+            Swish(),
 
             # Segunda camada densa
             nn.Linear(dense_l_1, dense_l_2),
             nn.Dropout(p=dropout),
-            nn.ReLU(),
+            # nn.ReLU(),
+            Swish(),
 
             # Terceiraa camada densa
             nn.Linear(dense_l_2, dense_l_3),
             nn.Dropout(p=dropout),
-            nn.ReLU(),
+            # nn.ReLU(),
+            Swish(),
 
             # Camada de saída da CNN usada como embedding dimension para o Transformer
             nn.Linear(dense_l_3, cnn_pre_classification),  # Dimensão de embedding para o Transformer
             nn.Dropout(p=dropout),  # Dropout para regularização,
-            nn.ReLU(),
+            # nn.ReLU(),
+            Swish(),
         )
 
     def forward(self, x):

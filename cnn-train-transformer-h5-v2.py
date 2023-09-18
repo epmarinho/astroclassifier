@@ -17,6 +17,7 @@ from cnn_transformer_core_h5_v2 import model
 from cnn_transformer_core_h5_v2 import train_loader
 from cnn_transformer_core_h5_v2 import validation_loader
 # from cnn_transformer_core_h5_v2 import num_epochs
+# from cnn_transformer_core_h5_v2 import Swish
 import os
 import torch.nn.init as init
 import numpy as np
