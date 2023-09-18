@@ -54,7 +54,7 @@ batch_size = 32
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
-cnn_pre_classification = 128 # este é o número de classes intermediárias como saída do modelo CNN
+cnn_pre_classification = 64 # este é o número de classes intermediárias como saída do modelo CNN
 
 # Parâmetros do Transformer Encoder
 embedding_dimension = cnn_pre_classification # dimensão do espaço de recursos, que é uma dimensão importante para a atenção
@@ -185,8 +185,13 @@ class CNN(nn.Module):
             nn.Dropout(p=dropout),
             nn.ReLU(),
 
+            # Terceiraa camada densa
+            nn.Linear(dense_l_2, dense_l_3),
+            nn.Dropout(p=dropout),
+            nn.ReLU(),
+
             # Camada de saída da CNN usada como embedding dimension para o Transformer
-            nn.Linear(dense_l_2, cnn_pre_classification),  # Dimensão de embedding para o Transformer
+            nn.Linear(dense_l_3, cnn_pre_classification),  # Dimensão de embedding para o Transformer
             nn.Dropout(p=dropout),  # Dropout para regularização,
             nn.ReLU(),
         )
