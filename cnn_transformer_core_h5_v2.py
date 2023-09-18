@@ -23,8 +23,8 @@ class Swish(nn.Module):
 nmaxpool = 4
 img_width = 256
 img_height = 256
-img_out_width = img_width // 2**nmaxpool
-img_out_height = img_height // 2**nmaxpool
+img_out_width = img_width // 4**nmaxpool
+img_out_height = img_height // 4**nmaxpool
 
 # Load class labels from the H5 file
 def load_class_labels_from_h5(h5file_path, dataset_name):
@@ -181,7 +181,8 @@ class CNN(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),
 
         )
-        self.global_max_pooling = nn.AdaptiveMaxPool2d((1, 1))  # Apply GAP to get a fixed-size representation
+        # at the output there are cnn_n_out_4 squared pictures of img_out_height * img_out_width pixels
+        self.global_max_pooling = nn.AdaptiveMaxPool2d((1, 1))  # Apply GMP to get a fixed-size representation
         # Camadas densas para pré-classificação, a serem usadas como dimensão de embedding para o Transformer
         dropout = 0.5
         expected_flattened_size = cnn_n_out_4 # * img_out_width * img_out_height

@@ -42,6 +42,7 @@ transform_train = transforms.Compose([
     transforms.RandomRotation(30),
     transforms.RandomHorizontalFlip(),
     transforms.Resize((img_width, img_height)),
+    # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1), # Randomly adjusts brightness, contrast, saturation, and hue.
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 ])
