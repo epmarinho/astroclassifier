@@ -12,12 +12,12 @@ import torchvision
 # import torchvision.transforms as transforms
 import visdom
 from utils import Visualizer
-from cnn_transformer_core_h5_v2 import model
-# from cnn_transformer_core_h5_v2 import learning_rate
-from cnn_transformer_core_h5_v2 import train_loader
-from cnn_transformer_core_h5_v2 import validation_loader
-# from cnn_transformer_core_h5_v2 import num_epochs
-# from cnn_transformer_core_h5_v2 import Swish
+from cnn_transformer_core_h5_v3 import model
+# from cnn_transformer_core_h5_v3 import learning_rate
+from cnn_transformer_core_h5_v3 import train_loader
+from cnn_transformer_core_h5_v3 import validation_loader
+# from cnn_transformer_core_h5_v3 import num_epochs
+# from cnn_transformer_core_h5_v3 import Swish
 import os
 import torch.nn.init as init
 import numpy as np
@@ -28,10 +28,10 @@ print(f"pytorch device: {device}")
 viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Definir o vetor de pesos das classes obtido empiricamente da última execução:
-galaxies = np.float32(1/184)
-globular = np.float32(1/118)
-nebulae  = np.float32(1/177)
-openclust= np.float32(1/121)
+galaxies = np.float32(1/452)
+globular = np.float32(1/160)
+nebulae  = np.float32(1/210)
+openclust= np.float32(1/73)
 # galaxies = np.float32(1)
 # globular = np.float32(1)
 # nebulae  = np.float32(1)
@@ -48,7 +48,7 @@ print(f"Class weights = {class_weights}")
 class_weights = class_weights.to(device)
 
 # Parâmetros de treinamento
-num_epochs = 120
+num_epochs = 40
 initial_learning_rate = 1e-4 # Valores maiores deram pau
 # Definir a função de perda e o otimizador
 weight_decay = 1e-7 # Este é um valor razoável
@@ -74,6 +74,9 @@ else:
     # for layer in model.children():
     #     if isinstance(layer, nn.Linear):
     #         init.kaiming_normal_(layer.weight)
+
+# Verifique os pesos carregados
+# print(model.state_dict())
 
 # Mover o modelo para o dispositivo GPU
 model.to(device)
@@ -153,11 +156,17 @@ model.to(device)
 train(model, train_loader, validation_loader, criterion, optimizer, num_epochs)
 validate(model, validation_loader)
 
-# Save the trained model
+# Save the trained weights
 saved_model_path = 'trained_cnn_model.pth'
 torch.save(model.state_dict(), saved_model_path)
 # print(f"model.state_dict '{model.state_dict()}'")
 print(f"Trained model saved to '{saved_model_path}'")
+# Carregue os pesos pré-treinados
+checkpoint = torch.load(model_checkpoint)
+# model.load_state_dict(checkpoint)
+# print("Pesos pré-treinados carregados com sucesso.")
+# # Verifique os pesos carregados
+# torch.save(model.state_dict(), 'pesos_lidos.pth')
 
 # plot the histogram for predicted categories - unbalanced histogram means low quality training
 unique_labels = set(predicted_labels)

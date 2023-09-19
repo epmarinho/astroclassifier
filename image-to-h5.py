@@ -34,20 +34,25 @@ def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
 nmaxpool = 3
 img_width = 256
 img_height = 256
-img_out_width = img_width // 2**nmaxpool
-img_out_height = img_height // 2**nmaxpool
+# img_out_width = img_width // 2**nmaxpool
+# img_out_height = img_height // 2**nmaxpool
 
 # Transformations for preprocessing
 transform_train = transforms.Compose([
     transforms.RandomRotation(30),
     transforms.RandomHorizontalFlip(),
+    transforms.RandomAdjustSharpness(sharpness_factor=2),
+    transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5), # Randomly adjusts brightness, contrast, saturation, and hue.
     transforms.Resize((img_width, img_height)),
-    # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1), # Randomly adjusts brightness, contrast, saturation, and hue.
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 ])
 
 transform_validation = transforms.Compose([
+    transforms.RandomRotation(30),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomAdjustSharpness(sharpness_factor=2),
+    transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5), # Randomly adjusts brightness, contrast, saturation, and hue.
     transforms.Resize((img_width, img_height)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])

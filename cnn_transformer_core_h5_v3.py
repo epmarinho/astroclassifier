@@ -2,6 +2,8 @@
 # About: the code is a core module to build a VGG like CNN with transformer, originally design to classify astronomical images
 # Creation: Aug 29, 2023
 # Usage, import cnn_transformer_core and its components therein
+# In the present version, the number of CNN layers are variable,
+# which slowed down in comparison with the former version
 
 import torch
 import torch.nn as nn
@@ -20,11 +22,11 @@ class Swish(nn.Module):
         return x * torch.sigmoid(self.beta * x)
 
 
-nmaxpool = 4
-img_width = 256
-img_height = 256
-img_out_width = img_width // 4**nmaxpool
-img_out_height = img_height // 4**nmaxpool
+# nmaxpool = 4
+# img_width = 256
+# img_height = 256
+# img_out_width = img_width // 4**nmaxpool
+# img_out_height = img_height // 4**nmaxpool
 
 # Load class labels from the H5 file
 def load_class_labels_from_h5(h5file_path, dataset_name):
@@ -134,104 +136,86 @@ class CNNTransformer(nn.Module):
 # classificação de imagem, incluindo a classificação de imagens astronômicas
 """
 
-# CNN connection number
-cnn_n_out_1 = 32
-cnn_n_out_2 = 64
-cnn_n_out_3 = 128
-cnn_n_out_4 = 256
-
-# Dense layer connection number
-dense_l_1 = 512
-dense_l_2 = 256
-dense_l_3 = 128
+# # CNN connection number
+# cnn_n_out_1 = 32
+# cnn_n_out_2 = 64
+# cnn_n_out_3 = 128
+# cnn_n_out_4 = 256
+#
+# # Dense layer connection number
+# dense_l_1 = 512
+# dense_l_2 = 256
+# dense_l_3 = 128
 
 # Definindo a arquitetura da CNN para extração de características
+import torch.nn as nn
+
 class CNN(nn.Module):
-    def __init__(self):
+    def __init__(self, cnn_out_dims, dense_dims):
         super(CNN, self).__init__()
 
+        self.cnn_out_dims = cnn_out_dims
+        self.dense_dims = dense_dims
+
         # Camadas convolucionais para extrair características das imagens
-        self.features = nn.Sequential(
-            # Bloco convolutivo 1 - saída maxpool tem metade das dimensões lineares da imagem de entrada redimensionada
-            nn.Conv2d(3, cnn_n_out_1, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(cnn_n_out_1),  # Normalização por lotes para estabilizar o treinamento
-            nn.ReLU(),
-            # Swish(),
-            nn.MaxPool2d(kernel_size=2, stride=2),  # Camada de max pooling para reduzir a resolução
+        self.conv_layers = nn.ModuleList()
+        in_channels = 3  # Número de canais de entrada
+        for out_dim in cnn_out_dims:
+            conv_layer = nn.Sequential(
+                nn.Conv2d(in_channels, out_dim, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(out_dim),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size=2, stride=2)
+            )
+            self.conv_layers.append(conv_layer)
+            in_channels = out_dim
 
-            # Bloco convolutivo 2 - saída maxpool tem 1/4 das dimensões lineares da imagem de entrada redimensionada
-            nn.Conv2d(cnn_n_out_1, cnn_n_out_2, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(cnn_n_out_2),
-            nn.ReLU(),
-            # Swish(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            # Bloco convolutivo 3
-            nn.Conv2d(cnn_n_out_2, cnn_n_out_3, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(cnn_n_out_3),
-            nn.ReLU(),
-            # Swish(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            # Bloco convolutivo 4
-            nn.Conv2d(cnn_n_out_3, cnn_n_out_4, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(cnn_n_out_4),
-            nn.ReLU(),
-            # Swish(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-        )
-        # at the output there are cnn_n_out_4 squared pictures with img_out_height * img_out_width pixels
-        self.global_max_pooling = nn.AdaptiveMaxPool2d((1, 1))  # Apply GMP to get a fixed-size representation
-        # Camadas densas para pré-classificação, a serem usadas como dimensão de embedding para o Transformer
+        # Camadas densas para pré-classificação
+        self.dense_layers = nn.ModuleList()
+        in_dim = out_dim
         dropout = 0.5
-        expected_flattened_size = cnn_n_out_4 # * img_out_width * img_out_height
+        for out_dim in dense_dims:
+            dense_layer = nn.Sequential(
+                nn.Linear(in_dim, out_dim),
+                nn.Dropout(p=dropout),
+                nn.ReLU()
+            )
+            self.dense_layers.append(dense_layer)
+            in_dim = out_dim
 
-        self.classifier = nn.Sequential(
-            # Primeira camada densa
-            nn.Linear(expected_flattened_size, dense_l_1),  # Conecta todas as características a uma camada densa
-            nn.Dropout(p=dropout),  # Dropout para evitar overfitting
-            nn.ReLU(),
-            # Swish(),
-
-            # Segunda camada densa
-            nn.Linear(dense_l_1, dense_l_2),
+        # Camada de saída da CNN usada como embedding dimension para o Transformer
+        self.embedding_layer = nn.Sequential(
+            nn.Linear(in_dim, cnn_pre_classification),
             nn.Dropout(p=dropout),
-            nn.ReLU(),
-            # Swish(),
-
-            # Terceiraa camada densa
-            nn.Linear(dense_l_2, dense_l_3),
-            nn.Dropout(p=dropout),
-            nn.ReLU(),
-            # Swish(),
-
-            # Camada de saída da CNN usada como embedding dimension para o Transformer
-            nn.Linear(dense_l_3, cnn_pre_classification),  # Dimensão de embedding para o Transformer
-            nn.Dropout(p=dropout),  # Dropout para regularização,
-            nn.ReLU(),
-            # Swish(),
+            nn.ReLU()
         )
 
     def forward(self, x):
         # Propagação das imagens através das camadas convolucionais
-        x = self.features(x)
+        for conv_layer in self.conv_layers:
+            x = conv_layer(x)
 
-        x = self.global_max_pooling(x)
+        # Global Max Pooling
+        x = nn.functional.adaptive_max_pool2d(x, (1, 1))
 
         # Redimensionamento das saídas para serem compatíveis com as camadas densas
         x = x.view(x.size(0), -1)
 
         # Propagação através das camadas densas para a pré-classificação
-        x = self.classifier(x)
+        for dense_layer in self.dense_layers:
+            x = dense_layer(x)
+
+        # Camada de embedding
+        x = self.embedding_layer(x)
 
         return x
 
 # Instanciar a CNN + Transformer
-# model = CNNTransformer(cnn_model, transformer_layers, num_classes=len(train_dataset.classes))
 num_classes = len(class_labels)
-cnn_model = CNN()
+cnn_out_dims = [64, 128, 256] #, 512]  # Lista de dimensões de saída para camadas convolucionais
+dense_dims = [512, 256] #, 128]  # Lista de dimensões de saída para camadas densas
+cnn_model = CNN(cnn_out_dims, dense_dims)
 model = CNNTransformer(cnn_model,
                        num_heads = 16,
-                       transformer_layers = 2,
+                       transformer_layers = 4,
                        num_dense_layers = 1)
