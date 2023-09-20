@@ -48,7 +48,7 @@ print(f"Class weights = {class_weights}")
 class_weights = class_weights.to(device)
 
 # Parâmetros de treinamento
-num_epochs = 40
+num_epochs = 80
 initial_learning_rate = 1e-4 # Valores maiores deram pau
 # Definir a função de perda e o otimizador
 weight_decay = 1e-7 # Este é um valor razoável
@@ -161,12 +161,13 @@ saved_model_path = 'trained_cnn_model.pth'
 torch.save(model.state_dict(), saved_model_path)
 # print(f"model.state_dict '{model.state_dict()}'")
 print(f"Trained model saved to '{saved_model_path}'")
-# Carregue os pesos pré-treinados
-checkpoint = torch.load(model_checkpoint)
+# # Carregue os pesos pré-treinados
+# checkpoint = torch.load(model_checkpoint)
 # model.load_state_dict(checkpoint)
 # print("Pesos pré-treinados carregados com sucesso.")
 # # Verifique os pesos carregados
 # torch.save(model.state_dict(), 'pesos_lidos.pth')
+# torch.save(model.state_dict(), 'trained_cnn_model.pth')
 
 # plot the histogram for predicted categories - unbalanced histogram means low quality training
 unique_labels = set(predicted_labels)

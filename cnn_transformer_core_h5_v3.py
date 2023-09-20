@@ -212,10 +212,10 @@ class CNN(nn.Module):
 
 # Instanciar a CNN + Transformer
 num_classes = len(class_labels)
-cnn_out_dims = [64, 128, 256] #, 512]  # Lista de dimensões de saída para camadas convolucionais
-dense_dims = [512, 256] #, 128]  # Lista de dimensões de saída para camadas densas
+cnn_out_dims = [64, 128, 256, 512]  # Lista de dimensões de saída para camadas convolucionais
+dense_dims = [512, 256, 128]  # Lista de dimensões de saída para camadas densas
 cnn_model = CNN(cnn_out_dims, dense_dims)
 model = CNNTransformer(cnn_model,
                        num_heads = 16,
-                       transformer_layers = 4,
+                       transformer_layers = 2,
                        num_dense_layers = 1)
