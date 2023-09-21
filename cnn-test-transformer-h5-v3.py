@@ -1,5 +1,5 @@
 # Author: Eraldo Pereira Marinho, Ph.D
-# About: the code imports cnn_transformer_core to validade the pre-trained classification of astronomical images
+# About: The code imports cnn_transformer_core to validate the pre-trained classification of astronomical images
 # Creation: Aug 29, 2023
 
 import torch
@@ -42,10 +42,10 @@ class_labels = ['galaxies', 'globular clusters', 'nebulae', 'open clusters']
 # Path to the validation images directory
 validation_dir = 'images/tests'
 
-conte_acertos:int=0
-imagens = os.listdir(validation_dir)
-total_imagens:int = len(imagens)
-print(f"Total de imagens de teste = {total_imagens}")
+correct_count = 0
+images = os.listdir(validation_dir)
+total_images = len(images)
+print(f"Total test images = {total_images}")
 
 # Iterate through images in the validation directory
 for filename in os.listdir(validation_dir):
@@ -68,11 +68,12 @@ for filename in os.listdir(validation_dir):
     # Print the inferred class
     print(f"Inferred class: {class_labels[predicted_class_index]}")
 
-    # Exiba a imagem usando matplotlib
+    # Display the image using matplotlib
     plt.imshow(sample_image)
     plt.show()
 
-    resposta = input("A classificação está correta? (Y/N): ")
-    if resposta == "y":
-        conte_acertos+=1
-print(f"Percentagem de acertos = {100 * conte_acertos / total_imagens} %")
+    response = input("Is the classification correct? (Y/N): ")
+    if response.lower() == "y":
+        correct_count += 1
+
+print(f"Accuracy percentage = {100 * correct_count / total_images} %")

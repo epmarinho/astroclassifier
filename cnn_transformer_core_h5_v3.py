@@ -1,8 +1,8 @@
 # Author: Eraldo Pereira Marinho, Ph.D
-# About: the code is a core module to build a VGG like CNN with transformer, originally design to classify astronomical images
+# About: The code is a core module to build a VGG-like CNN with transformer, originally designed to classify astronomical images
 # Creation: Aug 29, 2023
-# Usage, import cnn_transformer_core and its components therein
-# In the present version, the number of CNN layers are variable,
+# Usage: Import cnn_transformer_core and its components therein
+# In the present version, the number of CNN layers is variable,
 # which slowed down in comparison with the former version
 
 import torch
@@ -20,7 +20,6 @@ class Swish(nn.Module):
 
     def forward(self, x):
         return x * torch.sigmoid(self.beta * x)
-
 
 # nmaxpool = 4
 # img_width = 256
@@ -65,30 +64,29 @@ batch_size = 32
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
-cnn_pre_classification = 64 # este é o número de classes intermediárias como saída do modelo CNN
+cnn_pre_classification = 64 # This is the number of intermediate classes as the output of the CNN model
 
-# Parâmetros do Transformer Encoder
-embedding_dimension = cnn_pre_classification # dimensão do espaço de recursos, que é uma dimensão importante para a atenção
+# Transformer Encoder Parameters
+embedding_dimension = cnn_pre_classification # Dimension of the feature space, which is an important dimension for attention
 
-# Definindo a classe do modelo CNN + Transformer
+# Define the CNN + Transformer model class
 class CNNTransformer(nn.Module):
-    # def __init__(self, cnn_model, num_dense_layers=1):
     def __init__(self,
                  cnn_model,
                  num_heads = 16,
-                 transformer_layers = 2, # número de camadas de atenção do Transformer Encoder
+                 transformer_layers = 2, # Number of Transformer Encoder attention layers
                  num_dense_layers = 1,
         ):
         super(CNNTransformer, self).__init__()
         self.cnn_model = cnn_model
 
-        # Configuração do Transformer Encoder
+        # Transformer Encoder Configuration
         self.transformer = TransformerEncoder(
             TransformerEncoderLayer(d_model=embedding_dimension, nhead=num_heads, activation=F.relu),
             num_layers=transformer_layers
         )
 
-        # Adicionando camadas densas para classificação após o CNN Transformer
+        # Adding dense layers for classification after the CNN Transformer
         dense_layers = []
         input_size = embedding_dimension
         output_size_1 = 256
@@ -105,35 +103,34 @@ class CNNTransformer(nn.Module):
         input_size = output_size_2
         self.dense_layers = nn.Sequential(*dense_layers)
         self.fc = nn.Linear(output_size_2, num_classes)
-        # self.fc = nn.Linear(embedding_dimension, num_classes)
 
     def forward(self, x):
-        # Extração de características usando a CNN
+        # Feature extraction using the CNN
         features = self.cnn_model(x)
 
-        # Preparação das características para entrada no Transformer
-        features = features.view(features.size(0), features.size(1), -1)  # Achata as características
-        features = features.permute(2, 0, 1)  # Reordena para o formato adequado para o Transformer
+        # Preparing features for input to the Transformer
+        features = features.view(features.size(0), features.size(1), -1)  # Flatten the features
+        features = features.permute(2, 0, 1)  # Reorder for the Transformer-compatible format
 
-        # Aplicação do Transformer Encoder nas características
+        # Applying the Transformer Encoder on the features
         transformed_features = self.transformer(features)
 
-        # Revertendo a forma das características para o formato original
+        # Reverting the shape of features to the original format
         transformed_features = transformed_features.permute(1, 2, 0)
         transformed_features = transformed_features.contiguous().view(transformed_features.size(0), -1)
 
-        # Passagem das características pelo conjunto de camadas densas
+        # Passing features through the set of dense layers
         transformed_features = self.dense_layers(transformed_features)
 
-        # Camada final de classificação
+        # Final classification layer
         output = self.fc(transformed_features)
         return output
 
-# Observação:
+# Note:
 """
-# Para classificação de imagens, uma camada Decoder não é necessária. O Encoder do Transformer é usado para extrair recursos úteis da imagem
-# e as camadas de classificação subsequentes são usadas para fazer a predição das classes. Este é um design adequado para tarefas de
-# classificação de imagem, incluindo a classificação de imagens astronômicas
+# For image classification, a Decoder layer is not necessary. The Transformer Encoder is used to extract useful features from the image,
+# and subsequent classification layers are used to make class predictions. This is a suitable design for image classification tasks,
+# including the classification of astronomical images.
 """
 
 # # CNN connection number
@@ -147,7 +144,7 @@ class CNNTransformer(nn.Module):
 # dense_l_2 = 256
 # dense_l_3 = 128
 
-# Definindo a arquitetura da CNN para extração de características
+# Defining the CNN architecture for feature extraction
 import torch.nn as nn
 
 class CNN(nn.Module):
@@ -157,9 +154,9 @@ class CNN(nn.Module):
         self.cnn_out_dims = cnn_out_dims
         self.dense_dims = dense_dims
 
-        # Camadas convolucionais para extrair características das imagens
+        # Convolutional layers to extract features from images
         self.conv_layers = nn.ModuleList()
-        in_channels = 3  # Número de canais de entrada
+        in_channels = 3  # Number of input channels
         for out_dim in cnn_out_dims:
             conv_layer = nn.Sequential(
                 nn.Conv2d(in_channels, out_dim, kernel_size=3, stride=1, padding=1),
@@ -170,7 +167,7 @@ class CNN(nn.Module):
             self.conv_layers.append(conv_layer)
             in_channels = out_dim
 
-        # Camadas densas para pré-classificação
+        # Dense layers for pre-classification
         self.dense_layers = nn.ModuleList()
         in_dim = out_dim
         dropout = 0.5
@@ -183,7 +180,7 @@ class CNN(nn.Module):
             self.dense_layers.append(dense_layer)
             in_dim = out_dim
 
-        # Camada de saída da CNN usada como embedding dimension para o Transformer
+        # CNN output layer used as embedding dimension for the Transformer
         self.embedding_layer = nn.Sequential(
             nn.Linear(in_dim, cnn_pre_classification),
             nn.Dropout(p=dropout),
@@ -191,29 +188,29 @@ class CNN(nn.Module):
         )
 
     def forward(self, x):
-        # Propagação das imagens através das camadas convolucionais
+        # Propagating images through the convolutional layers
         for conv_layer in self.conv_layers:
             x = conv_layer(x)
 
         # Global Max Pooling
         x = nn.functional.adaptive_max_pool2d(x, (1, 1))
 
-        # Redimensionamento das saídas para serem compatíveis com as camadas densas
+        # Reshaping outputs to be compatible with the dense layers
         x = x.view(x.size(0), -1)
 
-        # Propagação através das camadas densas para a pré-classificação
+        # Propagating through the dense layers for pre-classification
         for dense_layer in self.dense_layers:
             x = dense_layer(x)
 
-        # Camada de embedding
+        # Embedding layer
         x = self.embedding_layer(x)
 
         return x
 
-# Instanciar a CNN + Transformer
+# Instantiate the CNN + Transformer
 num_classes = len(class_labels)
-cnn_out_dims = [64, 128, 256, 512]  # Lista de dimensões de saída para camadas convolucionais
-dense_dims = [512, 256, 128]  # Lista de dimensões de saída para camadas densas
+cnn_out_dims = [64, 128, 256, 512]  # List of output dimensions for convolutional layers
+dense_dims = [512, 256, 128]  # List of output dimensions for dense layers
 cnn_model = CNN(cnn_out_dims, dense_dims)
 model = CNNTransformer(cnn_model,
                        num_heads = 16,

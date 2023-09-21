@@ -1,5 +1,5 @@
 # Author: Eraldo Pereira Marinho, Ph.D
-# About: the code imports cnn_transformer_core to allow Transformer+CNN to classify astronomical images
+# About: The code imports cnn_transformer_core to allow Transformer+CNN to classify astronomical images
 # Creation: Jul 12, 2023
 
 import torch
@@ -23,11 +23,11 @@ import torch.nn.init as init
 import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"pytorch device: {device}")
+print(f"PyTorch device: {device}")
 
 viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
-# Definir o vetor de pesos das classes obtido empiricamente da última execução:
+# Define the class weight vector empirically obtained from the last run:
 galaxies = np.float32(1/452)
 globular = np.float32(1/160)
 nebulae  = np.float32(1/210)
@@ -47,49 +47,49 @@ print(f"Class weights = {class_weights}")
 # Weights tensor must be converted to the adopted device
 class_weights = class_weights.to(device)
 
-# Parâmetros de treinamento
-num_epochs = 80
-initial_learning_rate = 1e-4 # Valores maiores deram pau
-# Definir a função de perda e o otimizador
-weight_decay = 1e-7 # Este é um valor razoável
+# Training parameters
+num_epochs = 40
+initial_learning_rate = 1e-4 # Larger values caused issues
+# Define the loss function and optimizer
+weight_decay = 1e-7
 criterion = nn.CrossEntropyLoss(weight=class_weights)
 # criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=weight_decay)
-# Defina um scheduler para ajustar a taxa de aprendizado
-# Aqui, um scheduler StepLR é usado, que reduz a taxa de aprendizado por um fator gamma após um número fixo de épocas
+# Define a scheduler to adjust the learning rate
+# Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
 scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 
-# Verifique se o arquivo pré-treinado existe
+# Check if the pretrained file exists
 model_checkpoint = "trained_cnn_model.pth"
 if os.path.exists(model_checkpoint):
-    # Carregue os pesos pré-treinados
+    # Load pretrained weights
     checkpoint = torch.load(model_checkpoint)
     model.load_state_dict(checkpoint)
-    print("Pesos pré-treinados carregados com sucesso.")
+    print("Pretrained weights loaded successfully.")
 else:
-    print("Nenhum arquivo de pesos pré-treinados encontrado. Inicializando com pesos padrão do PyTorch.")
-    # Inicialização de He em PyTorch
-    # Acesse todas as camadas lineares (fully connected)
-    # Certifique-se de que o modelo contém apenas camadas que devem ser inicializadas com He
+    print("No pretrained weights file found. Initializing with PyTorch default weights.")
+    # He initialization in PyTorch
+    # Access all the linear layers (fully connected)
+    # Ensure the model contains only layers that should be initialized with He
     # for layer in model.children():
     #     if isinstance(layer, nn.Linear):
     #         init.kaiming_normal_(layer.weight)
 
-# Verifique os pesos carregados
+# Check the loaded weights
 # print(model.state_dict())
 
-# Mover o modelo para o dispositivo GPU
+# Move the model to the GPU device
 model.to(device)
 
-# Função de treinamento
+# Training function
 def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
-    model.train()  # Configurar o modelo para o modo de treinamento
+    model.train()  # Set the model to training mode
 
     for epoch in range(num_epochs):
         running_loss = 0.0
 
         for images, labels in dataloader:
-            # Mover as imagens e rótulos para o dispositivo GPU
+            # Move the images and labels to the GPU device
             images = images.to(device)
             labels = labels.to(device)
 
@@ -99,11 +99,11 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
             loss.backward()
 
             # Clip gradients
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm = 1.0)
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
             optimizer.step()
 
-            # Imprima ou registre os gradientes das camadas intermediárias
+            # Print or record gradients of intermediate layers
             # for name, param in model.named_parameters():
             #     if param.requires_grad and 'weight' in name:
             #         grdnorm = param.grad.norm().item()
@@ -112,7 +112,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
 
             running_loss += loss.item() * images.size(0)
 
-        # Atualize a taxa de aprendizado com base no scheduler
+        # Update the learning rate based on the scheduler
         scheduler.step()
 
         if epoch % 10 == 0:
@@ -122,18 +122,18 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
         viz.plot_lines('batch loss', epoch_loss)
 
-# predicted_labels array is used to construct a histogram to reveal how many times each class was used along the evaluation
+# The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
 predicted_labels = []
 
-# Função de validação
+# Validation function
 def validate(model, dataloader):
-    model.eval()  # Configurar o modelo para o modo de avaliação
+    model.eval()  # Set the model to evaluation mode
     correct = 0
     total = 0
 
     with torch.no_grad():
         for images, labels in dataloader:
-            # Mover as imagens e rótulos para o dispositivo GPU
+            # Move the images and labels to the GPU device
             images = images.to(device)
             labels = labels.to(device)
 
@@ -147,12 +147,12 @@ def validate(model, dataloader):
 
     accuracy = 100 * correct / total
     print(f'Accuracy: {accuracy:.2f}%')
-    viz.plot_lines('validation acuracy', accuracy)
+    viz.plot_lines('validation accuracy', accuracy)
 
-# Mover o modelo para o dispositivo GPU antes do treinamento
+# Move the model to the GPU device before training
 model.to(device)
 
-# Treinamento e validação da CNN
+# Train and validate the CNN
 train(model, train_loader, validation_loader, criterion, optimizer, num_epochs)
 validate(model, validation_loader)
 
@@ -161,24 +161,24 @@ saved_model_path = 'trained_cnn_model.pth'
 torch.save(model.state_dict(), saved_model_path)
 # print(f"model.state_dict '{model.state_dict()}'")
 print(f"Trained model saved to '{saved_model_path}'")
-# # Carregue os pesos pré-treinados
+# # Load pretrained weights
 # checkpoint = torch.load(model_checkpoint)
 # model.load_state_dict(checkpoint)
-# print("Pesos pré-treinados carregados com sucesso.")
-# # Verifique os pesos carregados
+# print("Pretrained weights loaded successfully.")
+# # Check the loaded weights
 # torch.save(model.state_dict(), 'pesos_lidos.pth')
 # torch.save(model.state_dict(), 'trained_cnn_model.pth')
 
-# plot the histogram for predicted categories - unbalanced histogram means low quality training
+# Plot the histogram for predicted categories - an unbalanced histogram indicates low-quality training
 unique_labels = set(predicted_labels)
-print("unique labels: ", unique_labels)
+print("Unique labels: ", unique_labels)
 label_to_idx = {label: idx for idx, label in enumerate(unique_labels)}
 indices = [label_to_idx[label] for label in predicted_labels]
-# print("índices: ", indices)
+# print("Indices: ", indices)
 
 label_counts = torch.bincount(torch.tensor(indices))
 
-print("label count: ", label_counts)
+print("Label count: ", label_counts)
 
 plt.bar(torch.arange(len(label_counts)), label_counts)
 plt.xlabel('Labels')

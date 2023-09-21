@@ -97,4 +97,3 @@ with h5py.File(h5file_path, "w") as h5file:
     dataloader_to_h5(train_loader, h5file, "train", class_labels)
     dataloader_to_h5(validation_loader, h5file, "validation", class_labels)
 
-# Now, your data from the data loaders is stored in "datasets.h5" in H5 format with inferred class labels.
