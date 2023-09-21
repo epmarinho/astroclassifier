@@ -21,6 +21,8 @@ from cnn_transformer_core_h5_v3 import validation_loader
 import os
 import torch.nn.init as init
 import numpy as np
+# from PIL import Image
+import pillow_avif
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"PyTorch device: {device}")
@@ -28,10 +30,10 @@ print(f"PyTorch device: {device}")
 viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
-galaxies = np.float32(1/452)
-globular = np.float32(1/160)
-nebulae  = np.float32(1/210)
-openclust= np.float32(1/73)
+galaxies = np.float32(1/185)
+globular = np.float32(1/118)
+nebulae  = np.float32(1/196)
+openclust= np.float32(1/121)
 # galaxies = np.float32(1)
 # globular = np.float32(1)
 # nebulae  = np.float32(1)
@@ -119,7 +121,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
             validate(model, validation_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
-        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
+        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
         viz.plot_lines('batch loss', epoch_loss)
 
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
