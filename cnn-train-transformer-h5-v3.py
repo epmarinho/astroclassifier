@@ -30,10 +30,12 @@ print(f"PyTorch device: {device}")
 viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
-galaxies = np.float32(1/185)
-globular = np.float32(1/118)
-nebulae  = np.float32(1/196)
-openclust= np.float32(1/121)
+# run after the classes histogram:
+galaxies = np.float32(1/324)
+globular = np.float32(1/149)
+nebulae  = np.float32(1/377)
+openclust= np.float32(1/70)
+# # run this before to have an actual class histogram
 # galaxies = np.float32(1)
 # globular = np.float32(1)
 # nebulae  = np.float32(1)
@@ -117,7 +119,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
         # Update the learning rate based on the scheduler
         scheduler.step()
 
-        if epoch % 10 == 0:
+        if epoch % 5 == 0:
             validate(model, validation_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)

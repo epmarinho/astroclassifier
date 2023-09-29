@@ -21,7 +21,7 @@ class Swish(nn.Module):
     def forward(self, x):
         return x * torch.sigmoid(self.beta * x)
 
-# Load class labels from the H5 file
+# Define how to load class labels from the H5 file
 def load_class_labels_from_h5(h5file_path, dataset_name):
     with h5py.File(h5file_path, "r") as h5file:
         class_labels = h5file.attrs[f"{dataset_name}_class_labels"]
@@ -54,14 +54,12 @@ train_dataset = torch.utils.data.TensorDataset(train_data, train_labels)
 validation_dataset = torch.utils.data.TensorDataset(validation_data, validation_labels)
 
 # Create data loaders
-batch_size = 32
+batch_size = 16
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
-cnn_pre_classification = 64 # This is the number of intermediate classes as the output of the CNN model
-
 # Transformer Encoder Parameters
-embedding_dimension = cnn_pre_classification # Dimension of the feature space, which is an important dimension for attention
+embedding_dimension = 64 # Dimension of the feature space, which is an important dimension for attention
 
 # Define the CNN + Transformer model class
 class CNNTransformer(nn.Module):
@@ -69,34 +67,37 @@ class CNNTransformer(nn.Module):
                  cnn_model,
                  num_heads = 16,
                  transformer_layers = 2, # Number of Transformer Encoder attention layers
-                 num_dense_layers = 1,
+                 # num_dense_layers = 1,
         ):
         super(CNNTransformer, self).__init__()
         self.cnn_model = cnn_model
 
         # Transformer Encoder Configuration
         self.transformer = TransformerEncoder(
-            TransformerEncoderLayer(d_model=embedding_dimension, nhead=num_heads, activation=F.relu),
+            TransformerEncoderLayer(d_model=embedding_dimension,
+                                    nhead=num_heads,
+                                    activation=F.relu,
+                                    dropout=0.1),
             num_layers=transformer_layers
         )
 
-        # Adding dense layers for classification after the CNN Transformer
-        dense_layers = []
-        input_size = embedding_dimension
-        output_size_1 = 256
-        output_size_2 = 128
-        assert num_dense_layers > 0, "number of dense layers must be greater than or equal to 1"
-
-        for _ in range(num_dense_layers):
-            dense_layers.append(nn.Linear(input_size, output_size_1))
-            dense_layers.append(nn.ReLU())
-            input_size = output_size_1
-
-        dense_layers.append(nn.Linear(output_size_1, output_size_2))
-        dense_layers.append(nn.ReLU())
-        input_size = output_size_2
-        self.dense_layers = nn.Sequential(*dense_layers)
-        self.fc = nn.Linear(output_size_2, num_classes)
+        # # Adding dense layers for classification after the CNN Transformer
+        # input_size = embedding_dimension
+        # output_size_1 = 256
+        # output_size_2 = 128
+        # assert num_dense_layers > 0, "number of dense layers must be greater than or equal to 1"
+        # dense_layers = []
+        # for _ in range(num_dense_layers):
+        #     dense_layers.append(nn.Linear(input_size, output_size_1))
+        #     dense_layers.append(nn.ReLU())
+        #     input_size = output_size_1
+        #
+        # dense_layers.append(nn.Linear(output_size_1, output_size_2))
+        # dense_layers.append(nn.ReLU())
+        # input_size = output_size_2
+        # self.dense_layers = nn.Sequential(*dense_layers)
+        # self.fc = nn.Linear(output_size_2, num_classes)
+        self.fc = nn.Linear(embedding_dimension, num_classes)
 
     def forward(self, x):
         # Feature extraction using the CNN
@@ -113,8 +114,8 @@ class CNNTransformer(nn.Module):
         transformed_features = transformed_features.permute(1, 2, 0)
         transformed_features = transformed_features.contiguous().view(transformed_features.size(0), -1)
 
-        # Passing features through the set of dense layers
-        transformed_features = self.dense_layers(transformed_features)
+        # # Passing features through the set of dense layers
+        # transformed_features = self.dense_layers(transformed_features)
 
         # Final classification layer
         output = self.fc(transformed_features)
@@ -128,8 +129,6 @@ class CNNTransformer(nn.Module):
 """
 
 # Defining the CNN architecture for feature extraction
-import torch.nn as nn
-
 class CNN(nn.Module):
     def __init__(self, cnn_out_dims, dense_dims):
         super(CNN, self).__init__()
@@ -139,7 +138,7 @@ class CNN(nn.Module):
 
         # Convolutional layers to extract features from images
         self.conv_layers = nn.ModuleList()
-        in_channels = 3  # Number of input channels
+        in_channels = 3  # Number of input channels: (R, G, B)
         for out_dim in cnn_out_dims:
             conv_layer = nn.Sequential(
                 nn.Conv2d(in_channels, out_dim, kernel_size=3, stride=1, padding=1),
@@ -149,6 +148,9 @@ class CNN(nn.Module):
             )
             self.conv_layers.append(conv_layer)
             in_channels = out_dim
+
+        # Global Max Pooling, only if (h_out, w_out) == (1,1)
+        self.global_max_pooling = nn.AdaptiveMaxPool2d((3, 3))
 
         # Dense layers for pre-classification
         self.dense_layers = nn.ModuleList()
@@ -165,7 +167,7 @@ class CNN(nn.Module):
 
         # CNN output layer used as embedding dimension for the Transformer
         self.embedding_layer = nn.Sequential(
-            nn.Linear(in_dim, cnn_pre_classification),
+            nn.Linear(in_dim, embedding_dimension),
             nn.Dropout(p=dropout),
             nn.ReLU()
         )
@@ -176,7 +178,7 @@ class CNN(nn.Module):
             x = conv_layer(x)
 
         # Global Max Pooling
-        x = nn.functional.adaptive_max_pool2d(x, (1, 1))
+        x = nn.functional.adaptive_max_pool2d(x, (1, 1)) # Don't touch this line!
 
         # Reshaping outputs to be compatible with the dense layers
         x = x.view(x.size(0), -1)
@@ -190,12 +192,11 @@ class CNN(nn.Module):
 
         return x
 
-# Instantiate the CNN + Transformer
+# Gets the number of classes from the dataset
 num_classes = len(class_labels)
-cnn_out_dims = [64, 128, 256, 512, 1024]  # List of output dimensions for convolutional layers
-dense_dims = [512, 256, 128]  # List of output dimensions for dense layers
+
+# Instantiate the CNN + Dense layer + Transformer
+cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers
+dense_dims = [1024, 512, 256, 128]  # List of output dimensions for dense layers
 cnn_model = CNN(cnn_out_dims, dense_dims)
-model = CNNTransformer(cnn_model,
-                       num_heads = 32,
-                       transformer_layers = 4,
-                       num_dense_layers = 1)
+model = CNNTransformer(cnn_model, num_heads = 8)
