@@ -7,10 +7,10 @@
 
 import torch
 import torch.nn as nn
-from torch.nn import TransformerEncoder, TransformerEncoderLayer
+from torch.nn import TransformerEncoder, TransformerEncoderLayer, ReLU, PReLU
 import torchvision
 import torchvision.transforms as transforms
-import torch.nn.functional as F
+# import torch.nn.functional as F
 import h5py
 
 class Swish(nn.Module):
@@ -67,7 +67,7 @@ class CNNTransformer(nn.Module):
                  cnn_model,
                  num_heads = 16,
                  transformer_layers = 2, # Number of Transformer Encoder attention layers
-                 # num_dense_layers = 1,
+                 encoder_dropout = .1,
         ):
         super(CNNTransformer, self).__init__()
         self.cnn_model = cnn_model
@@ -76,8 +76,8 @@ class CNNTransformer(nn.Module):
         self.transformer = TransformerEncoder(
             TransformerEncoderLayer(d_model=embedding_dimension,
                                     nhead=num_heads,
-                                    activation=F.relu,
-                                    dropout=0.1),
+                                    activation=ReLU(),
+                                    dropout=encoder_dropout),
             num_layers=transformer_layers
         )
 
@@ -130,7 +130,7 @@ class CNNTransformer(nn.Module):
 
 # Defining the CNN architecture for feature extraction
 class CNN(nn.Module):
-    def __init__(self, cnn_out_dims, dense_dims):
+    def __init__(self, cnn_out_dims, dense_dims, dropout = 0.5):
         super(CNN, self).__init__()
 
         self.cnn_out_dims = cnn_out_dims
@@ -138,7 +138,7 @@ class CNN(nn.Module):
 
         # Convolutional layers to extract features from images
         self.conv_layers = nn.ModuleList()
-        in_channels = 3  # Number of input channels, saying (R, G, B)
+        in_channels = 3  # Number of input channels, say, (R, G, B)
         for out_dim in cnn_out_dims:
             conv_layer = nn.Sequential(
                 nn.Conv2d(in_channels, out_dim, kernel_size=3, stride=1, padding=1),
@@ -149,13 +149,12 @@ class CNN(nn.Module):
             self.conv_layers.append(conv_layer)
             in_channels = out_dim
 
-        # Global Max Pooling, only if (h_out, w_out) == (1,1)
+        # Global Max Pooling only if (h_out, w_out) == (1,1)
         self.global_max_pooling = nn.AdaptiveMaxPool2d((3, 3))
 
         # Dense layers for pre-classification
         self.dense_layers = nn.ModuleList()
         in_dim = out_dim
-        dropout = 0.5
         for out_dim in dense_dims:
             dense_layer = nn.Sequential(
                 nn.Linear(in_dim, out_dim),
@@ -196,7 +195,7 @@ class CNN(nn.Module):
 num_classes = len(class_labels)
 
 # Instantiate the CNN + Dense layer + Transformer
-cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers
-dense_dims = [1024, 512, 256, 128]  # List of output dimensions for dense layers
+cnn_out_dims = [64, 128, 256, 512] # List of output dimensions for convolutional layers
+dense_dims = [512, 256, 128]  # List of output dimensions for dense layers
 cnn_model = CNN(cnn_out_dims, dense_dims)
-model = CNNTransformer(cnn_model, num_heads = 8)
+model = CNNTransformer(cnn_model, num_heads = 16, transformer_layers = 4)
