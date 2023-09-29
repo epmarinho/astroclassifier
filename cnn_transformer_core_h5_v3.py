@@ -195,7 +195,7 @@ class CNN(nn.Module):
 num_classes = len(class_labels)
 
 # Instantiate the CNN + Dense layer + Transformer
-cnn_out_dims = [64, 128, 256, 512] # List of output dimensions for convolutional layers
+cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers
 dense_dims = [512, 256, 128]  # List of output dimensions for dense layers
 cnn_model = CNN(cnn_out_dims, dense_dims)
 model = CNNTransformer(cnn_model, num_heads = 16, transformer_layers = 4)
