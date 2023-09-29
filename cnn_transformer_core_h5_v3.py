@@ -89,11 +89,11 @@ class CNNTransformer(nn.Module):
         # dense_layers = []
         # for _ in range(num_dense_layers):
         #     dense_layers.append(nn.Linear(input_size, output_size_1))
-        #     dense_layers.append(nn.ReLU())
+        #     dense_layers.append(nn.PReLU())
         #     input_size = output_size_1
         #
         # dense_layers.append(nn.Linear(output_size_1, output_size_2))
-        # dense_layers.append(nn.ReLU())
+        # dense_layers.append(nn.PReLU())
         # input_size = output_size_2
         # self.dense_layers = nn.Sequential(*dense_layers)
         # self.fc = nn.Linear(output_size_2, num_classes)
@@ -138,12 +138,12 @@ class CNN(nn.Module):
 
         # Convolutional layers to extract features from images
         self.conv_layers = nn.ModuleList()
-        in_channels = 3  # Number of input channels: (R, G, B)
+        in_channels = 3  # Number of input channels, saying (R, G, B)
         for out_dim in cnn_out_dims:
             conv_layer = nn.Sequential(
                 nn.Conv2d(in_channels, out_dim, kernel_size=3, stride=1, padding=1),
                 nn.BatchNorm2d(out_dim),
-                nn.ReLU(),
+                nn.PReLU(),
                 nn.MaxPool2d(kernel_size=2, stride=2)
             )
             self.conv_layers.append(conv_layer)
@@ -160,7 +160,7 @@ class CNN(nn.Module):
             dense_layer = nn.Sequential(
                 nn.Linear(in_dim, out_dim),
                 nn.Dropout(p=dropout),
-                nn.ReLU()
+                nn.PReLU()
             )
             self.dense_layers.append(dense_layer)
             in_dim = out_dim
@@ -169,7 +169,7 @@ class CNN(nn.Module):
         self.embedding_layer = nn.Sequential(
             nn.Linear(in_dim, embedding_dimension),
             nn.Dropout(p=dropout),
-            nn.ReLU()
+            nn.PReLU()
         )
 
     def forward(self, x):
