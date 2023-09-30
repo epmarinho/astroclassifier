@@ -12,6 +12,8 @@ import torchvision
 import torchvision.transforms as transforms
 # import torch.nn.functional as F
 import h5py
+import torch.nn.init as init
+import os
 
 class Swish(nn.Module):
     def __init__(self, beta=1.0):
@@ -66,7 +68,7 @@ class CNNTransformer(nn.Module):
     def __init__(self,
                  cnn_model,
                  num_heads = 16,
-                 transformer_layers = 2, # Number of Transformer Encoder attention layers
+                 transformer_layers = 6, # Number of Transformer Encoder attention layers
                  encoder_dropout = .1,
         ):
         super(CNNTransformer, self).__init__()
@@ -76,7 +78,7 @@ class CNNTransformer(nn.Module):
         self.transformer = TransformerEncoder(
             TransformerEncoderLayer(d_model=embedding_dimension,
                                     nhead=num_heads,
-                                    activation=ReLU(),
+                                    activation=PReLU(),
                                     dropout=encoder_dropout),
             num_layers=transformer_layers
         )
@@ -89,11 +91,11 @@ class CNNTransformer(nn.Module):
         # dense_layers = []
         # for _ in range(num_dense_layers):
         #     dense_layers.append(nn.Linear(input_size, output_size_1))
-        #     dense_layers.append(nn.PReLU())
+        #     dense_layers.append(nn.ReLU())
         #     input_size = output_size_1
         #
         # dense_layers.append(nn.Linear(output_size_1, output_size_2))
-        # dense_layers.append(nn.PReLU())
+        # dense_layers.append(nn.ReLU())
         # input_size = output_size_2
         # self.dense_layers = nn.Sequential(*dense_layers)
         # self.fc = nn.Linear(output_size_2, num_classes)
@@ -130,7 +132,7 @@ class CNNTransformer(nn.Module):
 
 # Defining the CNN architecture for feature extraction
 class CNN(nn.Module):
-    def __init__(self, cnn_out_dims, dense_dims, dropout = 0.5):
+    def __init__(self, cnn_out_dims, dense_dims, dropout = 0.5, model_checkpoint = "trained_cnn_model.pth"):
         super(CNN, self).__init__()
 
         self.cnn_out_dims = cnn_out_dims
@@ -146,6 +148,9 @@ class CNN(nn.Module):
                 nn.PReLU(),
                 nn.MaxPool2d(kernel_size=2, stride=2)
             )
+            if model_checkpoint is None:
+                # Initialize the PReLU activations
+                nn.init.normal_(conv_layer[2].weight, mean=0.01, std=0.02)
             self.conv_layers.append(conv_layer)
             in_channels = out_dim
 
@@ -168,7 +173,7 @@ class CNN(nn.Module):
         self.embedding_layer = nn.Sequential(
             nn.Linear(in_dim, embedding_dimension),
             nn.Dropout(p=dropout),
-            nn.PReLU()
+            nn.ReLU()
         )
 
     def forward(self, x):
@@ -191,6 +196,44 @@ class CNN(nn.Module):
 
         return x
 
+# Initialize the entire model, including CNN and Transformer layers
+def initialize_weights(model, model_checkpoint="trained_cnn_model.pth"):
+    for module in model.modules():
+        if isinstance(module, (nn.Conv2d, nn.Linear)):
+            # Check if a pretrained weights file is provided
+            if os.path.exists(model_checkpoint):
+                checkpoint = torch.load(model_checkpoint)
+                for name, param in model.named_parameters():
+                    if name in checkpoint:
+                        param.data.copy_(checkpoint[name])
+                # module.load_state_dict(checkpoint)
+            else:
+                # Apply default weight initialization
+                if hasattr(module, 'weight'):
+                    init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
+                if hasattr(module, 'bias') and module.bias is not None:
+                    init.constant_(module.bias, 0)
+                # If the module has PReLU activation, initialize its weight with a small positive value
+                if isinstance(module, nn.PReLU):
+                    nn.init.normal_(module.activation.weight, mean=0.01, std=0.02)
+        elif isinstance(module, nn.TransformerEncoderLayer):
+            # Initialize Transformer layers
+            init.kaiming_normal_(module.self_attn.in_proj_weight, mode='fan_out', nonlinearity='relu')
+            init.kaiming_normal_(module.self_attn.out_proj.weight, mode='fan_out', nonlinearity='relu')
+            init.kaiming_normal_(module.linear1.weight, mode='fan_out', nonlinearity='relu')
+            init.kaiming_normal_(module.linear2.weight, mode='fan_out', nonlinearity='relu')
+            if module.self_attn.in_proj_bias is not None:
+                init.constant_(module.self_attn.in_proj_bias, 0)
+            if module.self_attn.out_proj.bias is not None:
+                init.constant_(module.self_attn.out_proj.bias, 0)
+            if module.linear1.bias is not None:
+                init.constant_(module.linear1.bias, 0)
+            if module.linear2.bias is not None:
+                init.constant_(module.linear2.bias, 0)
+            # Initialize PReLU activations in the Transformer layer
+            if isinstance(module, nn.PReLU):
+                nn.init.normal_(module.activation.weight, mean=0.01, std=0.02)
+
 # Gets the number of classes from the dataset
 num_classes = len(class_labels)
 
@@ -198,4 +241,7 @@ num_classes = len(class_labels)
 cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers
 dense_dims = [512, 256, 128]  # List of output dimensions for dense layers
 cnn_model = CNN(cnn_out_dims, dense_dims)
-model = CNNTransformer(cnn_model, num_heads = 16, transformer_layers = 4)
+model = CNNTransformer(cnn_model, num_heads = 8, transformer_layers = 2)
+
+# # Initialize the model's weights - this fukin shit doesn't work
+# initialize_weights(model)

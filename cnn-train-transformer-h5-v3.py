@@ -66,20 +66,20 @@ scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 # Check if the pretrained file exists
 model_checkpoint = "trained_cnn_model.pth"
 if os.path.exists(model_checkpoint):
-    # Load pretrained weights
-    checkpoint = torch.load(model_checkpoint)
-    model.load_state_dict(checkpoint)
-    print("Pretrained weights loaded successfully.")
+    # # Load pretrained weights
+    # checkpoint = torch.load(model_checkpoint)
+    # model.load_state_dict(checkpoint)
+    print(f"Pretrained weights \"{model_checkpoint}\" found.")
 else:
     print("No pretrained weights file found. Initializing with PyTorch default weights.")
-    # He initialization in PyTorch
-    # Access all the linear layers (fully connected)
-    # Ensure the model contains only layers that should be initialized with He
-    # for layer in model.children():
-    #     if isinstance(layer, nn.Linear):
-    #         init.kaiming_normal_(layer.weight)
+#     # He initialization in PyTorch
+#     # Access all the linear layers (fully connected)
+#     # Ensure the model contains only layers that should be initialized with He
+#     # for layer in model.children():
+#     #     if isinstance(layer, nn.Linear):
+#     #         init.kaiming_normal_(layer.weight)
 
-# Check the loaded weights
+# # Check the loaded weights
 # print(model.state_dict())
 
 # Move the model to the GPU device
