@@ -72,7 +72,7 @@ for filename in os.listdir(validation_dir):
     plt.imshow(sample_image)
     plt.show()
 
-    response = input("Is the classification correct? (Y/N): ")
+    response = input("Is the classification correct? (Y/N): ").strip()
     if response.lower() == "y":
         correct_count += 1
 

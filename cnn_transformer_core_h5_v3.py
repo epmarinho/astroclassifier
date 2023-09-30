@@ -196,16 +196,18 @@ class CNN(nn.Module):
 
         return x
 
-# Initialize the entire model, including CNN and Transformer layers
+# Initialize the entire model, including CNN and Transformer layers - I got weird results after calling this procedure
 def initialize_weights(model, model_checkpoint="trained_cnn_model.pth"):
     for module in model.modules():
         if isinstance(module, (nn.Conv2d, nn.Linear)):
             # Check if a pretrained weights file is provided
             if os.path.exists(model_checkpoint):
                 checkpoint = torch.load(model_checkpoint)
+                # This was necessary to mitigate an inconsistency between saved/loaded weights file
                 for name, param in model.named_parameters():
                     if name in checkpoint:
                         param.data.copy_(checkpoint[name])
+                # # Commented due to the explanation above
                 # module.load_state_dict(checkpoint)
             else:
                 # Apply default weight initialization
