@@ -119,7 +119,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
         # Update the learning rate based on the scheduler
         scheduler.step()
 
-        if epoch % 5 == 0:
+        if epoch % 5 == 0 and epoch:
             validate(model, validation_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
@@ -129,29 +129,64 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
 predicted_labels = []
 
+from sklearn.metrics import confusion_matrix
+
 # Validation function
 def validate(model, dataloader):
-    model.eval()  # Set the model to evaluation mode
-    correct = 0
+    # Initialize variables to keep track of counts
+    true_positives = 0
+    false_positives = 0
+    false_negatives = 0
     total = 0
+    correct = 0
+
+    model.eval()  # Set the model to evaluation mode
+
+    all_predicted = []
+    all_true = []
 
     with torch.no_grad():
         for images, labels in dataloader:
             # Move the images and labels to the GPU device
             images = images.to(device)
-            labels = labels.to(device)
+            true_labels = labels.to(device)
 
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
 
             predicted_labels.extend(predicted.tolist())
 
+            all_predicted.extend(predicted.tolist())
+            all_true.extend(true_labels.tolist())
+
             total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            correct += (predicted == true_labels).sum().item()
 
     accuracy = 100 * correct / total
+
+    cm = confusion_matrix(all_true, all_predicted)
+
+    # Compute precision and recall for each class
+    precision = []
+    recall = []
+
+    for i in range(len(cm)):
+        true_positive = cm[i, i]
+        false_positive = sum(cm[j, i] for j in range(len(cm))) - true_positive
+        false_negative = sum(cm[i, j] for j in range(len(cm))) - true_positive
+
+        precision_i = true_positive / (true_positive + false_positive + 1e-8)
+        recall_i = true_positive / (true_positive + false_negative + 1e-8)
+
+        precision.append(precision_i)
+        recall.append(recall_i)
+
     print(f'Accuracy: {accuracy:.2f}%')
+    print(f'Precision per class: {precision}')
+    print(f'Recall per class: {recall}')
     viz.plot_lines('validation accuracy', accuracy)
+    viz.plot_lines('validation precision', precision)
+    viz.plot_lines('validation recall', recall)
 
 # Move the model to the GPU device before training
 model.to(device)
@@ -180,11 +215,11 @@ label_to_idx = {label: idx for idx, label in enumerate(unique_labels)}
 indices = [label_to_idx[label] for label in predicted_labels]
 # print("Indices: ", indices)
 
-label_counts = torch.bincount(torch.tensor(indices))
+label_count = torch.bincount(torch.tensor(indices, dtype=torch.int64))
 
-print("Label count: ", label_counts)
+print("Label count: ", label_count)
 
-plt.bar(torch.arange(len(label_counts)), label_counts)
+plt.bar(torch.arange(len(label_count)), label_count)
 plt.xlabel('Labels')
 plt.ylabel('Frequency')
 plt.show()
