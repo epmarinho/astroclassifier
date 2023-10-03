@@ -132,7 +132,11 @@ class CNNTransformer(nn.Module):
 
 # Defining the CNN architecture for feature extraction
 class CNN(nn.Module):
-    def __init__(self, cnn_out_dims, dense_dims, dropout = 0.5, model_checkpoint = "trained_cnn_model.pth"):
+    def __init__(self,
+                 cnn_out_dims,
+                 dense_dims,
+                 dropout = 0.5,
+                 model_checkpoint = "trained_cnn_model.pth"):
         super(CNN, self).__init__()
 
         self.cnn_out_dims = cnn_out_dims
@@ -196,7 +200,7 @@ class CNN(nn.Module):
 
         return x
 
-# Initialize the entire model, including CNN and Transformer layers - I got weird results after calling this procedure
+# Initialize the entire model, including CNN and Transformer layers
 def initialize_weights(model, model_checkpoint="trained_cnn_model.pth"):
     for module in model.modules():
         if isinstance(module, (nn.Conv2d, nn.Linear)):
@@ -245,5 +249,5 @@ dense_dims = [512, 256, 128]  # List of output dimensions for dense layers
 cnn_model = CNN(cnn_out_dims, dense_dims)
 model = CNNTransformer(cnn_model, num_heads = 8, transformer_layers = 2)
 
-# # Initialize the model's weights - this fukin shit doesn't work
+# # Initialize the model's weights
 initialize_weights(model)

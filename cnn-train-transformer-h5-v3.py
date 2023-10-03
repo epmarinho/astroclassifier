@@ -107,7 +107,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
 
             optimizer.step()
 
-            # Print or record gradients of intermediate layers
+            # # Print or record gradients of intermediate layers
             # for name, param in model.named_parameters():
             #     if param.requires_grad and 'weight' in name:
             #         grdnorm = param.grad.norm().item()
@@ -119,7 +119,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
         # Update the learning rate based on the scheduler
         scheduler.step()
 
-        if epoch % 5 == 0 and epoch:
+        if epoch % 5 == 0:
             validate(model, validation_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
@@ -169,6 +169,7 @@ def validate(model, dataloader):
     # Compute precision and recall for each class
     precision = []
     recall = []
+    f1_scores = []
 
     for i in range(len(cm)):
         true_positive = cm[i, i]
@@ -177,16 +178,20 @@ def validate(model, dataloader):
 
         precision_i = true_positive / (true_positive + false_positive + 1e-8)
         recall_i = true_positive / (true_positive + false_negative + 1e-8)
+        f1_i = 2 * (precision_i * recall_i) / (precision_i + recall_i + 1e-8)
 
         precision.append(precision_i)
         recall.append(recall_i)
+        f1_scores.append(f1_i)
 
     print(f'Accuracy: {accuracy:.2f}%')
     print(f'Precision per class: {precision}')
     print(f'Recall per class: {recall}')
+    print(f'F1-score per class: {f1_scores}')
     viz.plot_lines('validation accuracy', accuracy)
     viz.plot_lines('validation precision', precision)
     viz.plot_lines('validation recall', recall)
+    viz.plot_lines('validation F1-score', recall)
 
 # Move the model to the GPU device before training
 model.to(device)
