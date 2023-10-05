@@ -57,7 +57,6 @@ initial_learning_rate = 1e-4 # Larger values caused issues
 # Define the loss function and optimizer
 weight_decay = 1e-7
 criterion = nn.CrossEntropyLoss(weight=class_weights)
-# criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=weight_decay)
 # Define a scheduler to adjust the learning rate
 # Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
@@ -119,7 +118,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
         # Update the learning rate based on the scheduler
         scheduler.step()
 
-        if epoch % 5 == 0:
+        if epoch % 2 == 0:
             validate(model, validation_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
@@ -188,10 +187,10 @@ def validate(model, dataloader):
     print(f'Precision per class: {precision}')
     print(f'Recall per class: {recall}')
     print(f'F1-score per class: {f1_scores}')
-    viz.plot_lines('validation accuracy', accuracy)
-    viz.plot_lines('validation precision', precision)
-    viz.plot_lines('validation recall', recall)
-    viz.plot_lines('validation F1-score', recall)
+    viz.plot_lines('Accuracy', accuracy)
+    viz.plot_lines('Precision', precision)
+    viz.plot_lines('Recall', recall)
+    viz.plot_lines('F1-scores', f1_scores)
 
 # Move the model to the GPU device before training
 model.to(device)
