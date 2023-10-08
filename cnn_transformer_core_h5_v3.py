@@ -69,6 +69,7 @@ class CNNTransformer(nn.Module):
                  cnn_model,
                  num_heads = 16,
                  transformer_layers = 6, # Number of Transformer Encoder attention layers
+                 num_dense_layers = 1,
                  encoder_dropout = .1,
         ):
         super(CNNTransformer, self).__init__()
@@ -80,26 +81,29 @@ class CNNTransformer(nn.Module):
                                     nhead=num_heads,
                                     activation=PReLU(),
                                     dropout=encoder_dropout),
-            num_layers=transformer_layers
-        )
+                                    num_layers=transformer_layers,
+                                    enable_nested_tensor=True,  # Set enable_nested_tensor to True
+            )
 
-        # # Adding dense layers for classification after the CNN Transformer
-        # input_size = embedding_dimension
-        # output_size_1 = 256
-        # output_size_2 = 128
-        # assert num_dense_layers > 0, "number of dense layers must be greater than or equal to 1"
-        # dense_layers = []
-        # for _ in range(num_dense_layers):
-        #     dense_layers.append(nn.Linear(input_size, output_size_1))
-        #     dense_layers.append(nn.ReLU())
-        #     input_size = output_size_1
-        #
-        # dense_layers.append(nn.Linear(output_size_1, output_size_2))
-        # dense_layers.append(nn.ReLU())
-        # input_size = output_size_2
-        # self.dense_layers = nn.Sequential(*dense_layers)
-        # self.fc = nn.Linear(output_size_2, num_classes)
-        self.fc = nn.Linear(embedding_dimension, num_classes)
+        # Adding dense layers for classification after the CNN Transformer
+        input_size = embedding_dimension
+        output_size_2 = 128
+        dense_layers = []
+        if num_dense_layers > 0:
+            output_size_1 = 256
+            for _ in range(num_dense_layers):
+                dense_layers.append(nn.Linear(input_size, output_size_1))
+                dense_layers.append(nn.PReLU())
+                input_size = output_size_1
+        else:
+            output_size_1 = input_size
+
+        dense_layers.append(nn.Linear(output_size_1, output_size_2))
+        dense_layers.append(nn.PReLU())
+        input_size = output_size_2
+        self.dense_layers = nn.Sequential(*dense_layers)
+        self.fc = nn.Linear(output_size_2, num_classes)
+        # self.fc = nn.Linear(embedding_dimension, num_classes)
 
     def forward(self, x):
         # Feature extraction using the CNN
@@ -116,8 +120,8 @@ class CNNTransformer(nn.Module):
         transformed_features = transformed_features.permute(1, 2, 0)
         transformed_features = transformed_features.contiguous().view(transformed_features.size(0), -1)
 
-        # # Passing features through the set of dense layers
-        # transformed_features = self.dense_layers(transformed_features)
+        # Passing features through the set of dense layers
+        transformed_features = self.dense_layers(transformed_features)
 
         # Final classification layer
         output = self.fc(transformed_features)
@@ -152,14 +156,14 @@ class CNN(nn.Module):
                 nn.PReLU(),
                 nn.MaxPool2d(kernel_size=2, stride=2)
             )
-            if model_checkpoint is None:
+            if not os.path.exists(model_checkpoint):
                 # Initialize the PReLU activations
                 nn.init.normal_(conv_layer[2].weight, mean=0.01, std=0.02)
             self.conv_layers.append(conv_layer)
             in_channels = out_dim
 
-        # Global Max Pooling only if (h_out, w_out) == (1,1)
-        self.global_max_pooling = nn.AdaptiveMaxPool2d((3, 3))
+        # Global Max Pooling
+        self.global_max_pooling = nn.AdaptiveMaxPool2d((8,8))
 
         # Dense layers for pre-classification
         self.dense_layers = nn.ModuleList()
@@ -239,15 +243,17 @@ def initialize_weights(model, model_checkpoint="trained_cnn_model.pth"):
             # Initialize PReLU activations in the Transformer layer
             if isinstance(module, nn.PReLU):
                 nn.init.normal_(module.activation.weight, mean=0.01, std=0.02)
+                module.use_nested_tensor = True
+                module.self_attn.batch_first = True  # Change to batch_first for better inference performance
 
 # Gets the number of classes from the dataset
 num_classes = len(class_labels)
 
 # Instantiate the CNN + Dense layer + Transformer
-cnn_out_dims = [64, 128, 256, 512] # List of output dimensions for convolutional layers
+cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers
 dense_dims = [512, 256, 128]  # List of output dimensions for dense layers
 cnn_model = CNN(cnn_out_dims, dense_dims)
-model = CNNTransformer(cnn_model, num_heads = 8, transformer_layers = 2)
+model = CNNTransformer(cnn_model, num_heads = 8, transformer_layers = 2, num_dense_layers = 0)
 
-# # Initialize the model's weights
+# Initialize the model's weights
 initialize_weights(model)

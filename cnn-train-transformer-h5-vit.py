@@ -104,7 +104,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
             optimizer.step()
             running_loss += loss.item() * images.size(0)
         scheduler.step()
-        if epoch % 10 == 0:
+        if epoch % 2 == 0:
             test(model, validation_loader)
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
@@ -129,7 +129,7 @@ def test(model, dataloader):
             correct += (predicted == labels).sum().item()
     accuracy = 100 * correct / total
     print(f'Accuracy: {accuracy:.2f}%')
-    viz.plot_lines('test acuracy', accuracy)
+    viz.plot_lines('Acuracy', accuracy)
 
 # Training loop
 train(model, train_loader, validation_loader, criterion, optimizer, num_epochs)

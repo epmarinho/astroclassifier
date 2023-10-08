@@ -31,10 +31,10 @@ viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
-galaxies = np.float32(1/324)
-globular = np.float32(1/149)
-nebulae  = np.float32(1/377)
-openclust= np.float32(1/70)
+galaxies = np.float32(1/1653)
+globular = np.float32(1/845)
+nebulae  = np.float32(1/1132)
+openclust= np.float32(1/507)
 # # run this before to have an actual class histogram
 # galaxies = np.float32(1)
 # globular = np.float32(1)
@@ -52,15 +52,14 @@ print(f"Class weights = {class_weights}")
 class_weights = class_weights.to(device)
 
 # Training parameters
-num_epochs = 40
+num_epochs = 20
 initial_learning_rate = 1e-4 # Larger values caused issues
 # Define the loss function and optimizer
-weight_decay = 1e-7
 criterion = nn.CrossEntropyLoss(weight=class_weights)
-optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=weight_decay)
+optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate) # , weight_decay=1e-6)
 # Define a scheduler to adjust the learning rate
 # Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
-scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
 
 # Check if the pretrained file exists
 model_checkpoint = "trained_cnn_model.pth"
@@ -183,7 +182,7 @@ def validate(model, dataloader):
         recall.append(recall_i)
         f1_scores.append(f1_i)
 
-    print(f'Accuracy: {accuracy:.2f}%')
+    print(f'Training accuracy: {accuracy:.2f}%')
     print(f'Precision per class: {precision}')
     print(f'Recall per class: {recall}')
     print(f'F1-score per class: {f1_scores}')

@@ -9,6 +9,9 @@ import torchvision.transforms as transforms
 from PIL import Image, features
 import pillow_avif
 from torchvision.datasets import ImageFolder
+# from cnn_transformer_core_h5_v3 import batch_size
+
+batch_size = 64
 
 # Define a function to convert a PyTorch DataLoader to H5 format
 def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
@@ -93,8 +96,6 @@ validation_dataset = ImageFolder(root=validation_data_root, transform=transform_
 #     print("The images are not normalized to [0, 1].")
 # print(f" Min pix = {min_pixel_value}, max pix = {max_pixel_value}.")
 
-batch_size = 32
-
 # Get the class labels from the dataset
 class_labels = train_dataset.classes
 
@@ -118,15 +119,17 @@ def check_images(image_folder):
 
 # Create data loaders
 
-print("### Checking training images\n")
+print("\n### Checking training images\n")
 check_images(train_data_root)
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-print("### Checking validation images\n")
+print("\n### Checking validation images\n")
 check_images(validation_data_root)
-validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=True)
 
 # Create an H5 file to store the data
+
+print("\n### Converting images data-loader to H5 format\n")
 h5file_path = "datasets.h5"
 with h5py.File(h5file_path, "w") as h5file:
     dataloader_to_h5(train_loader, h5file, "train", class_labels)

@@ -48,13 +48,13 @@ print(f"Class weights = {class_weights}")
 class_weights = class_weights.to(device)
 
 # Parâmetros de treinamento
-num_epochs = 120
+num_epochs = 40
 initial_learning_rate = 1e-4 # Valores maiores deram pau
 # Definir a função de perda e o otimizador
 weight_decay = 1e-7 # Este é um valor razoável
 criterion = nn.CrossEntropyLoss(weight=class_weights)
 # criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=weight_decay)
+optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate) # , weight_decay=weight_decay)
 # Defina um scheduler para ajustar a taxa de aprendizado
 # Aqui, um scheduler StepLR é usado, que reduz a taxa de aprendizado por um fator gamma após um número fixo de épocas
 scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
