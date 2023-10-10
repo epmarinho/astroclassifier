@@ -45,9 +45,9 @@ def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
     except Exception as e:
         print(f"Error storing class labels as attributes in H5 file: {e}")
 
-# nmaxpool = 3
-img_width = 224
-img_height = 224
+nmaxpool = 3
+img_width = 256
+img_height = 256
 # img_out_width = img_width // 2**nmaxpool
 # img_out_height = img_height // 2**nmaxpool
 
@@ -128,8 +128,6 @@ check_images(validation_data_root)
 validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=True)
 
 # Create an H5 file to store the data
-
-print("\n### Converting images data-loader to H5 format\n")
 h5file_path = "datasets.h5"
 with h5py.File(h5file_path, "w") as h5file:
     dataloader_to_h5(train_loader, h5file, "train", class_labels)

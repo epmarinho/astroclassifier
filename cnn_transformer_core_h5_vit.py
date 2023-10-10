@@ -61,8 +61,8 @@ class ViTClassifier(nn.Module):
             patch_size=16,
             num_classes=num_classes,
             dim=1024,
-            depth=2,
-            heads=8,
+            depth=4,
+            heads=16,
             mlp_dim=2048
         )
 

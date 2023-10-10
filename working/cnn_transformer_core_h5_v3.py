@@ -61,7 +61,7 @@ train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
 validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
 # Transformer Encoder Parameters
-embedding_dimension = 128 # Dimension of the feature space, which is an important dimension for attention
+embedding_dimension = 64 # Dimension of the feature space, which is an important dimension for attention
 
 # Define the CNN + Transformer model class
 class CNNTransformer(nn.Module):
@@ -163,7 +163,7 @@ class CNN(nn.Module):
             in_channels = out_dim
 
         # Global Max Pooling
-        self.global_max_pooling = nn.AdaptiveMaxPool2d((7,7))
+        self.global_max_pooling = nn.AdaptiveMaxPool2d((8,8))
 
         # Dense layers for pre-classification
         self.dense_layers = nn.ModuleList()
@@ -251,9 +251,9 @@ num_classes = len(class_labels)
 
 # Instantiate the CNN + Dense layer + Transformer
 cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers
-dense_dims = [1024, 512, 256]  # List of output dimensions for dense layers
+dense_dims = [512, 256, 128]  # List of output dimensions for dense layers
 cnn_model = CNN(cnn_out_dims, dense_dims)
-model = CNNTransformer(cnn_model, num_heads = 16, transformer_layers = 2, num_dense_layers = 6)
+model = CNNTransformer(cnn_model, num_heads = 8, transformer_layers = 2, num_dense_layers = 0)
 
 # Initialize the model's weights
 initialize_weights(model)
