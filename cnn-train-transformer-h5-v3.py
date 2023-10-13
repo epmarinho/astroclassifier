@@ -14,8 +14,8 @@ import visdom
 from utils import Visualizer
 from cnn_transformer_core_h5_v3 import model
 # from cnn_transformer_core_h5_v3 import learning_rate
-from cnn_transformer_core_h5_v3 import train_loader
-from cnn_transformer_core_h5_v3 import validation_loader
+from cnn_transformer_core_h5_v3 import train_dataloader
+from cnn_transformer_core_h5_v3 import validation_dataloader
 # from cnn_transformer_core_h5_v3 import num_epochs
 # from cnn_transformer_core_h5_v3 import Swish
 import os
@@ -52,11 +52,11 @@ print(f"Class weights = {class_weights}")
 class_weights = class_weights.to(device)
 
 # Training parameters
-num_epochs = 30
+num_epochs = 40
 initial_learning_rate = 1e-4 # Larger values caused issues
 # Define the loss function and optimizer
 criterion = nn.CrossEntropyLoss(weight=class_weights)
-optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate) # , weight_decay=1e-6)
+optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=.5e-6)
 # Define a scheduler to adjust the learning rate
 # Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
 scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
@@ -84,7 +84,7 @@ else:
 model.to(device)
 
 # Training function
-def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
+def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
     model.train()  # Set the model to training mode
 
     for epoch in range(num_epochs):
@@ -101,7 +101,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
             loss.backward()
 
             # Clip gradients
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
 
             optimizer.step()
 
@@ -122,7 +122,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
 
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
-        viz.plot_lines('batch loss', epoch_loss)
+        viz.plot_lines('Batch Loss', epoch_loss)
 
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
 predicted_labels = []
@@ -136,6 +136,7 @@ def validate(model, dataloader):
     false_positives = 0
     false_negatives = 0
     total = 0
+    total_loss = 0
     correct = 0
 
     model.eval()  # Set the model to evaluation mode
@@ -148,18 +149,29 @@ def validate(model, dataloader):
             # Move the images and labels to the GPU device
             images = images.to(device)
             true_labels = labels.to(device)
+            total += true_labels.size(0)
 
+            # Use the trained CNN+Transformer model for the image-set
             outputs = model(images)
+
+            # Compute the Loss function defined in criterion
+            loss = criterion(outputs, true_labels)
+
+            # Sum up the computed loss
+            total_loss += loss.item()
+
+            # Get the predicted labels
             _, predicted = torch.max(outputs.data, 1)
+
+            # Count the correct ones
+            correct += (predicted == true_labels).sum().item()
 
             predicted_labels.extend(predicted.tolist())
 
             all_predicted.extend(predicted.tolist())
             all_true.extend(true_labels.tolist())
 
-            total += labels.size(0)
-            correct += (predicted == true_labels).sum().item()
-
+    validation_loss = total_loss / len(dataloader)
     accuracy = 100 * correct / total
 
     cm = confusion_matrix(all_true, all_predicted)
@@ -182,11 +194,12 @@ def validate(model, dataloader):
         recall.append(recall_i)
         f1_scores.append(f1_i)
 
-    print(f'Training accuracy: {accuracy:.2f}%')
+    print(f'Validation Loss: {validation_loss:.6f}, Validation Accuracy: {accuracy:.2f}%')
     print(f'Precision per class: {precision}')
     print(f'Recall per class: {recall}')
     print(f'F1-score per class: {f1_scores}')
-    viz.plot_lines('Accuracy', accuracy)
+    viz.plot_lines('Validation Loss', validation_loss)
+    viz.plot_lines('Validation Accuracy', accuracy)
     viz.plot_lines('Precision', precision)
     viz.plot_lines('Recall', recall)
     viz.plot_lines('F1-scores', f1_scores)
@@ -194,9 +207,11 @@ def validate(model, dataloader):
 # Move the model to the GPU device before training
 model.to(device)
 
-# Train and validate the CNN
-train(model, train_loader, validation_loader, criterion, optimizer, num_epochs)
-validate(model, validation_loader)
+# Train the CNN+Transformer
+train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, num_epochs)
+
+# Validate the CNN+Transformer
+validate(model, validation_dataloader)
 
 # Save the trained weights
 saved_model_path = 'trained_cnn_model.pth'
@@ -222,7 +237,7 @@ label_count = torch.bincount(torch.tensor(indices, dtype=torch.int64))
 
 print("Label count: ", label_count)
 
-plt.bar(torch.arange(len(label_count)), label_count)
-plt.xlabel('Labels')
-plt.ylabel('Frequency')
-plt.show()
+# plt.bar(torch.arange(len(label_count)), label_count)
+# plt.xlabel('Labels')
+# plt.ylabel('Frequency')
+# plt.show()

@@ -1,9 +1,8 @@
-# Author: Eraldo Pereira Marinho, Ph.D
-# About: The code is a core module to build a VGG-like CNN with transformer, originally designed to classify astronomical images
-# Creation: Aug 29, 2023
-# Usage: Import cnn_transformer_core and its components therein
-# In the present version, the number of CNN layers is variable,
-# which slowed down in comparison with the former version
+# Author: Eraldo Pereira Marinho, Ph.D.
+# Description: This code is a core module for building a VGG-like CNN with a transformer, initially designed for classifying astronomical images.
+# Created: August 29, 2023
+# Usage: Import 'cnn_transformer_core' and its components.
+# In this version, the number of CNN layers is variable, which may result in slower performance compared to the previous version.
 
 import torch
 import torch.nn as nn
@@ -57,11 +56,8 @@ validation_dataset = torch.utils.data.TensorDataset(validation_data, validation_
 
 # Create data loaders
 batch_size = 16
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
-
-# Transformer Encoder Parameters
-embedding_dimension = 128 # Dimension of the feature space, which is an important dimension for attention
+train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
 # Define the CNN + Transformer model class
 class CNNTransformer(nn.Module):
@@ -69,7 +65,7 @@ class CNNTransformer(nn.Module):
                  cnn_model,
                  num_heads = 16,
                  transformer_layers = 6, # Number of Transformer Encoder attention layers
-                 num_dense_layers = 1,
+                 num_dense_layers = 3,
                  encoder_dropout = .1,
         ):
         super(CNNTransformer, self).__init__()
@@ -77,33 +73,28 @@ class CNNTransformer(nn.Module):
 
         # Transformer Encoder Configuration
         self.transformer = TransformerEncoder(
-            TransformerEncoderLayer(d_model=embedding_dimension,
-                                    nhead=num_heads,
-                                    activation=PReLU(),
-                                    dropout=encoder_dropout),
-                                    num_layers=transformer_layers,
-                                    enable_nested_tensor=True,  # Set enable_nested_tensor to True
-            )
+            TransformerEncoderLayer(
+                d_model=embedding_dimension,
+                nhead=num_heads, activation='relu', # Break the Transformer default activation (GELU)
+                dropout=encoder_dropout
+            ),
+            num_layers=transformer_layers,
+            enable_nested_tensor=True,
+        )
 
         # Adding dense layers for classification after the CNN Transformer
         input_size = embedding_dimension
-        output_size_2 = 128
+        output_size_2 = input_size // 2** num_dense_layers
+        assert output_size_2 > num_classes, f'Error: FC output size = {output_size_2} whereas number of classes = {num_classes}'
         dense_layers = []
-        if num_dense_layers > 0:
-            output_size_1 = 256
-            for _ in range(num_dense_layers):
-                dense_layers.append(nn.Linear(input_size, output_size_1))
-                dense_layers.append(nn.PReLU())
-                input_size = output_size_1
-        else:
-            output_size_1 = input_size
+        for _ in range(num_dense_layers):
+            output_size_1 = input_size // 2
+            dense_layers.append(nn.Linear(input_size, output_size_1))
+            dense_layers.append(nn.GELU()) # Worked much much better with GELU
+            input_size = output_size_1
 
-        dense_layers.append(nn.Linear(output_size_1, output_size_2))
-        dense_layers.append(nn.PReLU())
-        input_size = output_size_2
         self.dense_layers = nn.Sequential(*dense_layers)
-        self.fc = nn.Linear(output_size_2, num_classes)
-        # self.fc = nn.Linear(embedding_dimension, num_classes)
+        self.fc = nn.Linear(output_size_2, num_classes) if num_dense_layers > 0 else nn.Linear(embedding_dimension, num_classes)
 
     def forward(self, x):
         # Feature extraction using the CNN
@@ -146,24 +137,30 @@ class CNN(nn.Module):
         self.cnn_out_dims = cnn_out_dims
         self.dense_dims = dense_dims
 
+        # Check the existence of a pretrained model - comment out the following block in case of not using PReLU
+        init_weights = not os.path.exists(model_checkpoint)
+
         # Convolutional layers to extract features from images
         self.conv_layers = nn.ModuleList()
         in_channels = 3  # Number of input channels, say, (R, G, B)
         for out_dim in cnn_out_dims:
+
+            if init_weights:
+                # Initialize the PReLU activations if pertinent
+                nn.init.normal_(nn.PReLU().weight, mean=0.01, std=0.02)
+
             conv_layer = nn.Sequential(
                 nn.Conv2d(in_channels, out_dim, kernel_size=3, stride=1, padding=1),
                 nn.BatchNorm2d(out_dim),
-                nn.PReLU(),
+                nn.PReLU(), # PReLU worked better than both ReLU and GELU
                 nn.MaxPool2d(kernel_size=2, stride=2)
             )
-            if not os.path.exists(model_checkpoint):
-                # Initialize the PReLU activations
-                nn.init.normal_(conv_layer[2].weight, mean=0.01, std=0.02)
+
             self.conv_layers.append(conv_layer)
             in_channels = out_dim
 
-        # Global Max Pooling
-        self.global_max_pooling = nn.AdaptiveMaxPool2d((7,7))
+        # Global Max Pooling - presuming the input image is (256,256) size with 4 convolutional layers
+        self.global_max_pooling = nn.AdaptiveMaxPool2d((8,8))
 
         # Dense layers for pre-classification
         self.dense_layers = nn.ModuleList()
@@ -172,16 +169,16 @@ class CNN(nn.Module):
             dense_layer = nn.Sequential(
                 nn.Linear(in_dim, out_dim),
                 nn.Dropout(p=dropout),
-                nn.PReLU()
+                nn.ReLU() # Better results with ReLU
             )
             self.dense_layers.append(dense_layer)
             in_dim = out_dim
 
-        # CNN output layer used as embedding dimension for the Transformer
+        # CNN output layer used as embedding dimension for the Transformer Encoder
         self.embedding_layer = nn.Sequential(
             nn.Linear(in_dim, embedding_dimension),
-            nn.Dropout(p=dropout),
-            nn.ReLU()
+            # nn.Dropout(p=dropout),
+            nn.GELU() # Some improvement using GELU
         )
 
     def forward(self, x):
@@ -204,7 +201,7 @@ class CNN(nn.Module):
 
         return x
 
-# Initialize the entire model, including CNN and Transformer layers
+# Initialize the entire model, including CNN and Transformer layers - must be revised
 def initialize_weights(model, model_checkpoint="trained_cnn_model.pth"):
     for module in model.modules():
         if isinstance(module, (nn.Conv2d, nn.Linear)):
@@ -249,11 +246,14 @@ def initialize_weights(model, model_checkpoint="trained_cnn_model.pth"):
 # Gets the number of classes from the dataset
 num_classes = len(class_labels)
 
+# Transformer Encoder Parameters
+embedding_dimension = 128 # Dimension of the feature space, which is an important dimension for encoder attention
+
 # Instantiate the CNN + Dense layer + Transformer
 cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers
-dense_dims = [1024, 512, 256]  # List of output dimensions for dense layers
+dense_dims = [1024, 512, 256] # List of output dimensions for dense layers
 cnn_model = CNN(cnn_out_dims, dense_dims)
-model = CNNTransformer(cnn_model, num_heads = 16, transformer_layers = 2, num_dense_layers = 6)
+model = CNNTransformer(cnn_model, num_heads = 16, transformer_layers = 2, num_dense_layers = 2)
 
 # Initialize the model's weights
 initialize_weights(model)
