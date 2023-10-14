@@ -177,7 +177,7 @@ class CNN(nn.Module):
         # CNN output layer used as embedding dimension for the Transformer Encoder
         self.embedding_layer = nn.Sequential(
             nn.Linear(in_dim, embedding_dimension),
-            # nn.Dropout(p=dropout),
+            # nn.Dropout(p=dropout), # Dropout for FC output didn't work
             nn.GELU() # Some improvement using GELU
         )
 
