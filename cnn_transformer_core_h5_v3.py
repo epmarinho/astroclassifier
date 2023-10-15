@@ -54,8 +54,10 @@ validation_labels = torch.tensor(validation_labels)
 train_dataset = torch.utils.data.TensorDataset(train_data, train_labels)
 validation_dataset = torch.utils.data.TensorDataset(validation_data, validation_labels)
 
-# Create data loaders
+# Setup the mini-batch size
 batch_size = 16
+
+# Create data loaders
 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
@@ -130,24 +132,16 @@ class CNN(nn.Module):
     def __init__(self,
                  cnn_out_dims,
                  dense_dims,
-                 dropout = 0.5,
-                 model_checkpoint = "trained_cnn_model.pth"):
+                 dropout = 0.5):
         super(CNN, self).__init__()
 
         self.cnn_out_dims = cnn_out_dims
         self.dense_dims = dense_dims
 
-        # Check the existence of a pretrained model - comment out the following block in case of not using PReLU
-        init_weights = not os.path.exists(model_checkpoint)
-
         # Convolutional layers to extract features from images
         self.conv_layers = nn.ModuleList()
         in_channels = 3  # Number of input channels, say, (R, G, B)
         for out_dim in cnn_out_dims:
-
-            if init_weights:
-                # Initialize the PReLU activations if pertinent
-                nn.init.normal_(nn.PReLU().weight, mean=0.01, std=0.02)
 
             conv_layer = nn.Sequential(
                 nn.Conv2d(in_channels, out_dim, kernel_size=3, stride=1, padding=1),
@@ -160,7 +154,8 @@ class CNN(nn.Module):
             in_channels = out_dim
 
         # Global Max Pooling - presuming the input image is (256,256) size with 4 convolutional layers
-        self.global_max_pooling = nn.AdaptiveMaxPool2d((8,8))
+        # self.global_max_pooling = nn.AdaptiveMaxPool2d((1,1))
+        self.global_max_pooling = nn.AdaptiveMaxPool2d((8,8)) # This is the best by now
 
         # Dense layers for pre-classification
         self.dense_layers = nn.ModuleList()
@@ -201,48 +196,6 @@ class CNN(nn.Module):
 
         return x
 
-# Initialize the entire model, including CNN and Transformer layers - must be revised
-def initialize_weights(model, model_checkpoint="trained_cnn_model.pth"):
-    for module in model.modules():
-        if isinstance(module, (nn.Conv2d, nn.Linear)):
-            # Check if a pretrained weights file is provided
-            if os.path.exists(model_checkpoint):
-                checkpoint = torch.load(model_checkpoint)
-                # This was necessary to mitigate an inconsistency between saved/loaded weights file
-                for name, param in model.named_parameters():
-                    if name in checkpoint:
-                        param.data.copy_(checkpoint[name])
-                # # Commented due to the explanation above
-                # module.load_state_dict(checkpoint)
-            else:
-                # Apply default weight initialization
-                if hasattr(module, 'weight'):
-                    init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
-                if hasattr(module, 'bias') and module.bias is not None:
-                    init.constant_(module.bias, 0)
-                # If the module has PReLU activation, initialize its weight with a small positive value
-                if isinstance(module, nn.PReLU):
-                    nn.init.normal_(module.activation.weight, mean=0.01, std=0.02)
-        elif isinstance(module, nn.TransformerEncoderLayer):
-            # Initialize Transformer layers
-            init.kaiming_normal_(module.self_attn.in_proj_weight, mode='fan_out', nonlinearity='relu')
-            init.kaiming_normal_(module.self_attn.out_proj.weight, mode='fan_out', nonlinearity='relu')
-            init.kaiming_normal_(module.linear1.weight, mode='fan_out', nonlinearity='relu')
-            init.kaiming_normal_(module.linear2.weight, mode='fan_out', nonlinearity='relu')
-            if module.self_attn.in_proj_bias is not None:
-                init.constant_(module.self_attn.in_proj_bias, 0)
-            if module.self_attn.out_proj.bias is not None:
-                init.constant_(module.self_attn.out_proj.bias, 0)
-            if module.linear1.bias is not None:
-                init.constant_(module.linear1.bias, 0)
-            if module.linear2.bias is not None:
-                init.constant_(module.linear2.bias, 0)
-            # Initialize PReLU activations in the Transformer layer
-            if isinstance(module, nn.PReLU):
-                nn.init.normal_(module.activation.weight, mean=0.01, std=0.02)
-                module.use_nested_tensor = True
-                module.self_attn.batch_first = True  # Change to batch_first for better inference performance
-
 # Gets the number of classes from the dataset
 num_classes = len(class_labels)
 
@@ -250,10 +203,7 @@ num_classes = len(class_labels)
 embedding_dimension = 128 # Dimension of the feature space, which is an important dimension for encoder attention
 
 # Instantiate the CNN + Dense layer + Transformer
-cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers
-dense_dims = [1024, 512, 256] # List of output dimensions for dense layers
+cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers # The best for unsorted astronomical image classification
+dense_dims = [1024, 512, 256] # List of output dimensions for dense layers # The best for unsorted astronomical image classification
 cnn_model = CNN(cnn_out_dims, dense_dims)
-model = CNNTransformer(cnn_model, num_heads = 16, transformer_layers = 2, num_dense_layers = 2)
-
-# Initialize the model's weights
-initialize_weights(model)
+model = CNNTransformer(cnn_model, num_heads = 16, transformer_layers = 2, num_dense_layers = 2) # The best for unsorted astronomical image classification
