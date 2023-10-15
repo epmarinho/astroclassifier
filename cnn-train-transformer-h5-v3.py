@@ -88,7 +88,7 @@ else:
 model.to(device)
 
 # Training function
-valid_update_rate = 2
+update_rate = 2
 def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
     model.train()  # Set the model to training mode
 
@@ -122,7 +122,7 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
         # Update the learning rate based on the scheduler
         scheduler.step()
 
-        if epoch % valid_update_rate == 0:
+        if epoch % update_rate == 0:
             validate(model, validation_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
