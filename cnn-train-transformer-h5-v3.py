@@ -52,11 +52,15 @@ print(f"Class weights = {class_weights}")
 class_weights = class_weights.to(device)
 
 # Training parameters
+
 num_epochs = 40
+
 initial_learning_rate = 1e-4 # Larger values caused issues
+
 # Define the loss function and optimizer
 criterion = nn.CrossEntropyLoss(weight=class_weights)
 optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=.5e-6)
+
 # Define a scheduler to adjust the learning rate
 # Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
 scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
@@ -64,9 +68,9 @@ scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
 # Check if the pretrained file exists
 model_checkpoint = "trained_cnn_model.pth"
 if os.path.exists(model_checkpoint):
-    # # Load pretrained weights
-    # checkpoint = torch.load(model_checkpoint)
-    # model.load_state_dict(checkpoint)
+    # Load pretrained weights
+    checkpoint = torch.load(model_checkpoint)
+    model.load_state_dict(checkpoint)
     print(f"Pretrained weights \"{model_checkpoint}\" found.")
 else:
     print("No pretrained weights file found. Initializing with PyTorch default weights.")
@@ -84,6 +88,7 @@ else:
 model.to(device)
 
 # Training function
+valid_update_rate = 2
 def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
     model.train()  # Set the model to training mode
 
@@ -117,7 +122,7 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
         # Update the learning rate based on the scheduler
         scheduler.step()
 
-        if epoch % 2 == 0:
+        if epoch % valid_update_rate == 0:
             validate(model, validation_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
