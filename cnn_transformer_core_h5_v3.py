@@ -154,8 +154,9 @@ class CNN(nn.Module):
             in_channels = out_dim
 
         # Global Max Pooling - presuming the input image is (256,256) size with 4 convolutional layers
-        # self.global_max_pooling = nn.AdaptiveMaxPool2d((1,1))
-        self.global_max_pooling = nn.AdaptiveMaxPool2d((8,8)) # This is the best by now
+        # Since the previous output is a collection of (16,16) images, then the global max pooling becomes
+        # a grid of 8x8=64 (2,2) adaptive max pooling cells
+        self.global_max_pooling = nn.AdaptiveMaxPool2d((8,8)) # This is the best to fit (16,16) convolutional output-layer
 
         # Dense layers for pre-classification
         self.dense_layers = nn.ModuleList()
