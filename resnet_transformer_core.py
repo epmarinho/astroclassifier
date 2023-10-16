@@ -133,7 +133,8 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
         self.dense_dims = dense_dims
         # Use a pre-trained ResNet model as the feature extractor
-        self.resnet = models.resnet50(pretrained=True)
+        # self.resnet = models.resnet50(pretrained=True)
+        self.resnet = models.resnet50(weights=torchvision.models.ResNet50_Weights.IMAGENET1K_V1)
         # Adjust the last classification layer of the ResNet to match your output dimension
         num_ftrs = self.resnet.fc.in_features
         self.resnet.fc = nn.Linear(num_ftrs, embedding_dimension)
