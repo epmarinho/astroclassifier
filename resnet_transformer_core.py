@@ -127,7 +127,7 @@ class ResNetTransformer(nn.Module):
 # including the classification of astronomical images.
 """
 
-# Defining the ResNet architecture for feature extraction
+# Defining the ResNet architecture for feature extraction - I'm using ResNet as a black box
 class ResNet(nn.Module):
     def __init__(self, dense_dims, dropout=0.5):
         super(ResNet, self).__init__()
@@ -167,4 +167,4 @@ embedding_dimension = 128 # Dimension of the feature space, which is an importan
 # Instantiate the ResNet + Dense layer + Transformer
 dense_dims = [4*embedding_dimension, 2*embedding_dimension, embedding_dimension] # List of output dimensions for dense layers # The best for unsorted astronomical image classification
 resnet_model = ResNet(dense_dims)
-model = ResNetTransformer(resnet_model, num_heads = 16, transformer_layers = 2, num_dense_layers = 2) # The best for unsorted astronomical image classification
+model = ResNetTransformer(resnet_model, num_heads = 16, transformer_layers = 2, num_dense_layers = 2) # The best for unsorted astronomical image classification by now

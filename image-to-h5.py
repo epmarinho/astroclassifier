@@ -46,33 +46,22 @@ def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
         print(f"Error storing class labels as attributes in H5 file: {e}")
 
 # Image dimensions
-img_width = 256
-img_height = 256
-# crop_size = img_width // 4
+img_width = 272
+img_height = 272
+crop_size = 256
 
 # Transformations for preprocessing
 transform_train = transforms.Compose([
     transforms.RandomRotation(30), # Apply a random rotation to the image within the range of -30 to +30 degrees
     transforms.RandomHorizontalFlip(), # Randomly flip the image horizontally (left to right)
-    # transforms.RandomVerticalFlip(), # Randomly flip the image vertically (upside down)
     transforms.RandomAdjustSharpness(sharpness_factor=1.5), # Randomly adjust the sharpness of the image, making it 1.5 times sharper
     transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5), # Randomly adjusts brightness, contrast, saturation, and hue.
     transforms.Resize((img_width, img_height)),
-    # transforms.RandomCrop(crop_size),
+    transforms.RandomCrop(crop_size),
     transforms.ToTensor(), # Convert the image to a PyTorch tensor
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]) # transformes color ranges from [0,1] to [-1,1]
 ])
-
 transform_validation = transform_train
-# transforms.Compose([
-#     transforms.RandomRotation(180),
-#     transforms.RandomHorizontalFlip(),
-#     transforms.RandomAdjustSharpness(sharpness_factor=2),
-#     transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5), # Randomly adjusts brightness, contrast, saturation, and hue.
-#     transforms.Resize((img_width, img_height)),
-#     transforms.ToTensor(),
-#     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-# ])
 
 # Define the root directory of your dataset
 train_data_root = r'images/train'
