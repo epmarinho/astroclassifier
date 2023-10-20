@@ -1,3 +1,5 @@
+""" Code name: cnn-train-transformer-h5-v3.py (main code for training)"""
+
 # Author: Eraldo Pereira Marinho, Ph.D
 # About: The code imports cnn_transformer_core to allow Transformer+CNN to classify astronomical images
 # Creation: Jul 12, 2023

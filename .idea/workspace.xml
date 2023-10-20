@@ -2,13 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6ac96494-d656-436a-9a73-54a58e377137" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/images/tests/561px-NGC_4298_cropped.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/tests/Coiled_Galaxy.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/tests/Wide_Field_Imager_view_of_a_Milky_Way_look-alike_NGC_6744.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/tests/photo-1505506874110-6a7a69069a08.avif" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/tests/photo-1614926037384-4159c33e196b.avif" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Modules List.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cnn-test-transformer-h5-v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/cnn-test-transformer-h5-v3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cnn-train-transformer-h5-v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/cnn-train-transformer-h5-v3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cnn_transformer_core_h5_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/cnn_transformer_core_h5_v3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/image-to-h5.py" beforeDir="false" afterPath="$PROJECT_DIR$/image-to-h5.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/resnet-train-transformer.py" beforeDir="false" afterPath="$PROJECT_DIR$/resnet-train-transformer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

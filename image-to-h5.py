@@ -1,3 +1,5 @@
+""" Code image-to-h5.py: converts an image directory structure into an H5 dataset"""
+
 # Authors: Eraldo Pereira Marinho and ChatGPT
 # Sep 11, 2023, 4:23pm
 
@@ -46,9 +48,9 @@ def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
         print(f"Error storing class labels as attributes in H5 file: {e}")
 
 # Image dimensions
-img_width = 272
-img_height = 272
-crop_size = 256
+img_width = 230
+img_height = 230
+crop_size = (224,224)
 
 # Transformations for preprocessing
 transform_train = transforms.Compose([

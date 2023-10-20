@@ -1,3 +1,5 @@
+""" Code: cnn-test-transformer-h5-v3.py (main code for test)"""
+
 # Author: Eraldo Pereira Marinho, Ph.D
 # About: The code imports cnn_transformer_core to validate the pre-trained classification of astronomical images
 # Creation: Aug 29, 2023
