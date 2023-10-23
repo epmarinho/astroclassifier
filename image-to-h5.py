@@ -13,7 +13,7 @@ import pillow_avif
 from torchvision.datasets import ImageFolder
 # from cnn_transformer_core_h5_v3 import batch_size
 
-batch_size = 64
+batch_size = 32
 
 # Define a function to convert a PyTorch DataLoader to H5 format
 def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
@@ -48,26 +48,93 @@ def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
         print(f"Error storing class labels as attributes in H5 file: {e}")
 
 # Image dimensions
-img_width = 230
-img_height = 230
+image_size = (256,256)
 crop_size = (224,224)
 
-# Transformations for preprocessing
-transform_train = transforms.Compose([
-    transforms.RandomRotation(30), # Apply a random rotation to the image within the range of -30 to +30 degrees
-    transforms.RandomHorizontalFlip(), # Randomly flip the image horizontally (left to right)
-    transforms.RandomAdjustSharpness(sharpness_factor=1.5), # Randomly adjust the sharpness of the image, making it 1.5 times sharper
-    transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5), # Randomly adjusts brightness, contrast, saturation, and hue.
-    transforms.Resize((img_width, img_height)),
-    transforms.RandomCrop(crop_size),
-    transforms.ToTensor(), # Convert the image to a PyTorch tensor
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]) # transformes color ranges from [0,1] to [-1,1]
-])
-transform_validation = transform_train
+# Padd input images to the minimal square frame
+def pad_to_square(img):
+    # Compute the difference between the longest and shortest side
+    w, h = img.size
+    diff = abs(h - w) // 2
+
+    # Determine padding for height and width
+    pad_h = diff if h <= w else 0
+    pad_w = diff if w < h else 0
+
+    # Return a new padded PIL image
+    return transforms.functional.pad(img, (pad_w, pad_h, pad_w, pad_h))
+
+# # Compute the dataset-wide mean and standard deviation
+# def compute_mean_std(loader):
+#     channel_sum, channel_squared_sum, n_batches = 0, 0, 0
+#
+#     for data, _ in loader:
+#         channel_sum += torch.mean(data, dim=[0,2,3])
+#         channel_squared_sum += torch.mean(data ** 2, dim=[0,2,3])
+#         n_batches += 1
+#
+#     mean = channel_sum / n_batches
+#     std = (channel_squared_sum/n_batches - mean**2)**0.5
+#
+#     return mean, std
 
 # Define the root directory of your dataset
 train_data_root = r'images/train'
 validation_data_root = r'images/validation'
+
+# # Create a temporary DataLoader for computing mean and stddev for training data
+# temp_train_loader = torch.utils.data.DataLoader(
+#     ImageFolder(root=train_data_root, transform=transforms.Compose([
+#         transforms.Lambda(pad_to_square),
+#         transforms.Resize((image_size, img_height)),
+#         transforms.RandomCrop(crop_size),
+#         transforms.ToTensor()
+#     ])),
+#     batch_size=batch_size, shuffle=False
+# )
+#
+# train_mean, train_stddev = compute_mean_std(temp_train_loader)
+#
+# # Create a temporary DataLoader for computing mean and stddev for training data
+# temp_validation_loader = torch.utils.data.DataLoader(
+#     ImageFolder(root=validation_data_root, transform=transforms.Compose([
+#         transforms.Lambda(pad_to_square),
+#         transforms.Resize((image_size, img_height)),
+#         transforms.RandomCrop(crop_size),
+#         transforms.ToTensor()
+#     ])),
+#     batch_size=batch_size, shuffle=False
+# )
+#
+# validation_mean, validation_stddev = compute_mean_std(temp_validation_loader)
+
+# Transformations for preprocessing
+
+transform_train = transforms.Compose([
+    transforms.Lambda(pad_to_square), # Apply padding to maintain aspect ratio as suggested by GPT-4
+    transforms.RandomRotation(15),
+    transforms.RandomHorizontalFlip(), # Randomly flip the image horizontally (left to right)
+    transforms.RandomAdjustSharpness(sharpness_factor=4),
+    # transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5), # Randomly adjusts brightness, contrast, saturation, and hue.
+    transforms.Resize(image_size),
+    transforms.RandomCrop(crop_size),
+    transforms.ToTensor(), # Convert the image to a PyTorch tensor
+    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]), # transformes color ranges from [0,1] to [-1,1]
+    # transforms.Normalize(mean=train_mean, std=train_stddev) # This did not work
+])
+
+transform_validation = transforms.Compose([
+    # transforms.RandomRotation(30), # Apply a random rotation to the image within the range of -30 to +30 degrees
+    # transforms.RandomHorizontalFlip(), # Randomly flip the image horizontally (left to right)
+    # transforms.RandomAdjustSharpness(sharpness_factor=1.5), # Randomly adjust the sharpness of the image, making it 1.5 times sharper
+    # transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5), # Randomly adjusts brightness, contrast, saturation, and hue.
+    transforms.Lambda(pad_to_square), # Apply padding to maintain aspect ratio # Suggested by GPT-4
+    transforms.Resize(image_size),
+    # transforms.RandomCrop(crop_size),
+    transforms.ToTensor(), # Convert the image to a PyTorch tensor
+    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]), # transformes color ranges from [0,1] to [-1,1]
+    # transforms.Normalize(mean=validation_mean, std=validation_stddev)
+])
 
 # Create ImageFolder datasets to infer class labels
 train_dataset = ImageFolder(root=train_data_root, transform=transform_train)

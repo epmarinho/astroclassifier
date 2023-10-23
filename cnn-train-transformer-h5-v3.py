@@ -33,10 +33,10 @@ viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
-galaxies = np.float32(1/1653)
-globular = np.float32(1/845)
-nebulae  = np.float32(1/1132)
-openclust= np.float32(1/507)
+galaxies = np.float32(1/188)
+globular = np.float32(1/107)
+nebulae  = np.float32(1/188)
+openclust= np.float32(1/125)
 # # run this before to have an actual class histogram
 # galaxies = np.float32(1)
 # globular = np.float32(1)
@@ -55,7 +55,7 @@ class_weights = class_weights.to(device)
 
 # Training parameters
 
-num_epochs = 40
+num_epochs = 30
 
 initial_learning_rate = 1e-4 # Larger values caused issues
 

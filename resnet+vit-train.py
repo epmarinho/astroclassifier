@@ -1,5 +1,5 @@
 # Author: Eraldo Pereira Marinho, Ph.D
-# About: The code imports resnet_transformer_core to allow Transformer+ResNet to classify astronomical images
+# About: The code imports resnet_plus_vit_transformer_core to allow Transformer+ResNet to classify astronomical images
 # Creation: Jul 12, 2023
 
 import torch
@@ -12,9 +12,9 @@ import torchvision
 # import torchvision.transforms as transforms
 import visdom
 from utils import Visualizer
-from resnet_transformer_core import model
-from resnet_transformer_core import train_dataloader
-from resnet_transformer_core import validation_dataloader
+from resnet_plus_vit_transformer_core import model
+from resnet_plus_vit_transformer_core import train_dataloader
+from resnet_plus_vit_transformer_core import validation_dataloader
 import os
 import torch.nn.init as init
 import numpy as np
@@ -28,10 +28,10 @@ viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
-galaxies = np.float32(1/1653)
-globular = np.float32(1/845)
-nebulae  = np.float32(1/1132)
-openclust= np.float32(1/507)
+galaxies = np.float32(1/960)
+globular = np.float32(1/381)
+nebulae  = np.float32(1/611)
+openclust= np.float32(1/391)
 # # run this before to have an actual class histogram
 # galaxies = np.float32(1)
 # globular = np.float32(1)
@@ -56,6 +56,7 @@ initial_learning_rate = 1e-4 # Larger values caused issues
 
 # Define the loss function and optimizer
 criterion = nn.CrossEntropyLoss(weight=class_weights)
+# criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=.5e-6)
 
 # Define a scheduler to adjust the learning rate
