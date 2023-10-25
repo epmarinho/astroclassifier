@@ -115,7 +115,6 @@ transform_train = transforms.Compose([
     transforms.RandomRotation(15),
     transforms.RandomHorizontalFlip(), # Randomly flip the image horizontally (left to right)
     transforms.RandomAdjustSharpness(sharpness_factor=4),
-    # transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5), # Randomly adjusts brightness, contrast, saturation, and hue.
     transforms.Resize(image_size),
     transforms.RandomCrop(crop_size),
     transforms.ToTensor(), # Convert the image to a PyTorch tensor
@@ -124,22 +123,17 @@ transform_train = transforms.Compose([
 ])
 
 transform_validation = transforms.Compose([
-    # transforms.RandomRotation(30), # Apply a random rotation to the image within the range of -30 to +30 degrees
-    # transforms.RandomHorizontalFlip(), # Randomly flip the image horizontally (left to right)
-    # transforms.RandomAdjustSharpness(sharpness_factor=1.5), # Randomly adjust the sharpness of the image, making it 1.5 times sharper
-    # transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5), # Randomly adjusts brightness, contrast, saturation, and hue.
     transforms.Lambda(pad_to_square), # Apply padding to maintain aspect ratio # Suggested by GPT-4
     transforms.Resize(image_size),
-    # transforms.RandomCrop(crop_size),
     transforms.ToTensor(), # Convert the image to a PyTorch tensor
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]), # transformes color ranges from [0,1] to [-1,1]
-    # transforms.Normalize(mean=validation_mean, std=validation_stddev)
 ])
 
 # Create ImageFolder datasets to infer class labels
 train_dataset = ImageFolder(root=train_data_root, transform=transform_train)
 validation_dataset = ImageFolder(root=validation_data_root, transform=transform_validation)
 
+## Only use the following to check the default tensor normalization
 # is_normalized = True  # Assume the dataset is normalized
 
 # for image, _ in train_dataset:
@@ -160,7 +154,7 @@ validation_dataset = ImageFolder(root=validation_data_root, transform=transform_
 class_labels = train_dataset.classes
 
 # Check images integrity for training/validation images
-from tqdm import tqdm
+from tqdm import tqdm # tqdm allows displaying a progress bar
 import os
 def check_images(image_folder):
     for subdir in os.listdir(image_folder):
@@ -195,4 +189,3 @@ with h5py.File(h5file_path, "w") as h5file:
     dataloader_to_h5(train_loader, h5file, "train", class_labels)
     dataloader_to_h5(validation_loader, h5file, "validation", class_labels)
 print("\n### Done\n")
-

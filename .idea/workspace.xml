@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="6ac96494-d656-436a-9a73-54a58e377137" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Modules List.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cnn-test-transformer-h5-v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/cnn-test-transformer-h5-v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cnn-train-transformer-h5-v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/cnn-train-transformer-h5-v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cnn_transformer_core_h5_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/cnn_transformer_core_h5_v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/image-to-h5.py" beforeDir="false" afterPath="$PROJECT_DIR$/image-to-h5.py" afterDir="false" />
+    <list default="true" id="6ac96494-d656-436a-9a73-54a58e377137" name="Changes" comment="Curiously, Model List.md is not displayed in the git site">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/resnet-train-transformer.py" beforeDir="false" afterPath="$PROJECT_DIR$/resnet-train-transformer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -68,6 +67,19 @@
       <option name="presentableId" value="Default" />
       <updated>1688584755280</updated>
     </task>
+    <task id="LOCAL-00001" summary="Curiously, Model List.md is not displayed in the git site">
+      <option name="closed" value="true" />
+      <created>1697825551658</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1697825551658</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Curiously, Model List.md is not displayed in the git site" />
+    <option name="LAST_COMMIT_MESSAGE" value="Curiously, Model List.md is not displayed in the git site" />
   </component>
 </project>
