@@ -107,7 +107,7 @@ def train(model, dataloader, validation_loader, criterion, optimizer, num_epochs
         if epoch % 2 == 0:
             test(model, validation_loader)
         epoch_loss = running_loss / len(dataloader.dataset)
-        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
+        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.5f}')
         viz.plot_lines('batch loss', epoch_loss)
 
 # predicted_labels array is used to construct a histogram to reveal how many times each class was used along the evaluation

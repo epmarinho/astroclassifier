@@ -8,10 +8,6 @@ import torch.nn as nn
 import h5py
 from vit_pytorch import SimpleViT
 
-# nmaxpool = 4
-img_width = 256
-img_height = 256
-
 # Load class labels from the H5 file
 def load_class_labels_from_h5(h5file_path, dataset_name):
     with h5py.File(h5file_path, "r") as h5file:
@@ -45,30 +41,45 @@ train_dataset = torch.utils.data.TensorDataset(train_data, train_labels)
 validation_dataset = torch.utils.data.TensorDataset(validation_data, validation_labels)
 
 # Create data loaders
-batch_size = 32
+batch_size =32
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
-# Parameters for ViT model
-num_classes = len(class_labels)  # Number of output classes
+images, labels = next(iter(train_loader))
 
-# Define the classification model using ViT
+num_classes = train_labels.max().item() + 1
+print(f'Number of classes = {num_classes}')
+
+# Get the size of the first image in the batch
+if len(images) > 0:
+    image_size = images[0].size()
+    _, height, width = images[0].size()
+    image_dimensions = (height, width)
+    print("The size of the images in the DataLoader is:", image_size)
+else:
+    print("No images found in the DataLoader.")
+
+img_width = width
+img_height = height
+
+# Now use image_dimensions when initializing the SimpleViT model
 class ViTClassifier(nn.Module):
     def __init__(self, num_classes):
         super(ViTClassifier, self).__init__()
         self.vit_model = SimpleViT(
-            image_size=img_width,
-            patch_size=16,
+            image_size=image_dimensions,  # Use the correct dimensions here
+            patch_size=16, # best 16 for (3,256,256) image
             num_classes=num_classes,
-            dim=1024,
+            dim=768, # best 768
             depth=4,
             heads=16,
-            mlp_dim=2048
+            mlp_dim=1024 # best 1024
         )
 
     def forward(self, x):
         x = self.vit_model(x)
         return x
+
 
 # Instantiate the ViT-based model
 model = ViTClassifier(num_classes)

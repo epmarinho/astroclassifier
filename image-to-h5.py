@@ -125,6 +125,7 @@ transform_train = transforms.Compose([
 transform_validation = transforms.Compose([
     transforms.Lambda(pad_to_square), # Apply padding to maintain aspect ratio # Suggested by GPT-4
     transforms.Resize(image_size),
+    transforms.RandomCrop(crop_size),
     transforms.ToTensor(), # Convert the image to a PyTorch tensor
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]), # transformes color ranges from [0,1] to [-1,1]
 ])
