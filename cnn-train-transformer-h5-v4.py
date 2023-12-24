@@ -197,11 +197,11 @@ def validate(model, dataloader):
     print(f'Precision per class: {precision}')
     print(f'Recall per class: {recall}')
     print(f'F1-score per class: {f1_scores}')
-    viz.plot_lines('Validation Loss', validation_loss)
-    viz.plot_lines('Validation Accuracy', accuracy)
-    viz.plot_lines('Precision', precision)
-    viz.plot_lines('Recall', recall)
-    viz.plot_lines('F1-scores', f1_scores)
+    #viz.plot_lines('Validation Loss', validation_loss)
+    #viz.plot_lines('Validation Accuracy', accuracy)
+    #viz.plot_lines('Precision', precision)
+    #viz.plot_lines('Recall', recall)
+    #viz.plot_lines('F1-scores', f1_scores)
 
     return accuracy
 
@@ -212,7 +212,7 @@ batch_sizes = [16, 32, 64]
 transformer_layers_options = [1, 2, 4, 6]
 num_dense_layers_options = [0, 1, 2, 3]
 num_heads_options = [2, 4, 8, 16]
-embedding_dimensions = [32, 64, 128]
+embedding_dimensions = [32, 64, 128, 256]
 
 best_accuracy = 0  # Track the best accuracy
 best_hyperparameters = None  # Track the best hyperparameters
@@ -231,7 +231,7 @@ for batch_size in batch_sizes:
 
                     print(f'\nEncoder attention embedding dimension = {embedding_dimension}')
                     print(f'Convolutional layers = {cnn_out_dims}')
-                    print(f'Full connected laysers = {dense_dims}')
+                    print(f'Full connected layers = {dense_dims}')
                     print(f'Batch size = {batch_size}')
                     print(f'Transformer layers = {transformer_layers}')
                     print(f'Num dense layers = {num_dense_layers}')
