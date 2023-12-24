@@ -203,6 +203,8 @@ def validate(model, dataloader):
     viz.plot_lines('Recall', recall)
     viz.plot_lines('F1-scores', f1_scores)
 
+    return accuracy
+
 """  **** Grid search loop ****  """
 
 # Define the grid for hyperparameters
@@ -229,7 +231,12 @@ for batch_size in batch_sizes:
 
                     print(f'\nEncoder attention embedding dimension = {embedding_dimension}')
                     print(f'Convolutional layers = {cnn_out_dims}')
-                    print(f'Full connected laysers = {dense_dims}\n')
+                    print(f'Full connected laysers = {dense_dims}')
+                    print(f'Batch size = {batch_size}')
+                    print(f'Transformer layers = {transformer_layers}')
+                    print(f'Num dense layers = {num_dense_layers}')
+                    print(f'Num heads = {num_heads}')
+                    print(f'Embedding dimension = {embedding_dimension}')
 
                     # Instantiate the CNN + Dense layer + Transformer
                     model = CNNTransformer(CNN(cnn_out_dims, dense_dims),
