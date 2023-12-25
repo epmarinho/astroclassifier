@@ -79,12 +79,12 @@ def init_weights(m):
 # Gets the number of classes from the dataset
 num_classes = len(class_labels)
 
-num_epochs = 20
+num_epochs = 30
 
 learning_rate = 1e-4 # Larger values caused issues
 
 # Training function
-update_rate = 2
+#update_rate = 2
 def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
     model.train()  # Set the model to training mode
 
@@ -118,11 +118,11 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
         # Update the learning rate based on the scheduler
         scheduler.step()
 
-        if epoch % update_rate == 0:
-            validate(model, validation_loader)
+        #if epoch % update_rate == 0:
+            #validate(model, validation_loader)
 
-        epoch_loss = running_loss / len(dataloader.dataset)
-        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
+        #epoch_loss = running_loss / len(dataloader.dataset)
+        #print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
         #viz.plot_lines('Batch Loss', epoch_loss)
 
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
@@ -193,10 +193,10 @@ def validate(model, dataloader):
         recall.append(recall_i)
         f1_scores.append(f1_i)
 
-    print(f'Validation Loss: {validation_loss:.6f}, Validation Accuracy: {accuracy:.2f}%')
-    print(f'Precision per class: {precision}')
-    print(f'Recall per class: {recall}')
-    print(f'F1-score per class: {f1_scores}')
+    #print(f'Validation Loss: {validation_loss:.6f}, Validation Accuracy: {accuracy:.2f}%')
+    #print(f'Precision per class: {precision}')
+    #print(f'Recall per class: {recall}')
+    #print(f'F1-score per class: {f1_scores}')
     #viz.plot_lines('Validation Loss', validation_loss)
     #viz.plot_lines('Validation Accuracy', accuracy)
     #viz.plot_lines('Precision', precision)
@@ -208,11 +208,11 @@ def validate(model, dataloader):
 """  **** Grid search loop ****  """
 
 # Define the grid for hyperparameters
-batch_sizes = [32, 16]
+batch_sizes = [32, 16, 8]
 transformer_layers_options = [4, 2, 1]
 num_dense_layers_options = [2, 1, 0]
 num_heads_options = [16, 8, 4]
-embedding_dimensions = [64, 32, 16]
+embedding_dimensions = [128, 64, 32]
 
 print(f'\nbatch sizes = {batch_sizes}')
 print(f'transformer layers = {transformer_layers_options}')
@@ -224,35 +224,36 @@ best_accuracy = 0  # Track the best accuracy
 best_hyperparameters = None  # Track the best hyperparameters
 
 for batch_size in batch_sizes:
+
+    # Create data loaders
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+
     for transformer_layers in transformer_layers_options:
         for num_dense_layers in num_dense_layers_options:
             for num_heads in num_heads_options:
                 for embedding_dimension in embedding_dimensions:
 
                     fc_out_dim = embedding_dimension
-                    dense_dims = [fc_out_dim * 4, fc_out_dim * 2, fc_out_dim] # List of output dimensions for dense layers # The best for unsorted astronomical image classification
-
+                    dense_dims = [fc_out_dim * 4, fc_out_dim * 2, fc_out_dim] # List of output dimensions for dense layers # The best by now
                     cnn_out_dim = 2 * dense_dims[0]
                     cnn_out_dims = [cnn_out_dim // 8, cnn_out_dim // 4, cnn_out_dim // 2, cnn_out_dim] # List of output dimensions for convolutional layers
 
-                    print(f'\nEncoder attention embedding dimension = {embedding_dimension}')
-                    print(f'Convolutional layers = {cnn_out_dims}')
-                    print(f'Full connected layers = {dense_dims}')
-                    print(f'Batch size = {batch_size}')
+                    #print(f'\nConvolutional layers = {cnn_out_dims}')
+                    #print(f'Full connected layers = {dense_dims}')
+                    print(f'\nBatch size = {batch_size}')
                     print(f'Transformer layers = {transformer_layers}')
                     print(f'Num dense layers = {num_dense_layers}')
                     print(f'Num heads = {num_heads}')
-                    print(f'Embedding dimension = {embedding_dimension}')
+                    print(f'Embedding dimension of the Encoder Attention = {embedding_dimension}\n')
 
                     # Instantiate the CNN + Dense layer + Transformer
-                    model = CNNTransformer(CNN(cnn_out_dims, dense_dims),
+                    model = CNNTransformer(
+                                        CNN(cnn_out_dims, dense_dims),
                                         num_heads=num_heads,
                                         transformer_layers=transformer_layers,
-                                        num_dense_layers=num_dense_layers)
-
-                    # Create data loaders
-                    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-                    validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+                                        num_dense_layers=num_dense_layers
+                                        )
 
                     # Restart all the network weights:
                     model.apply(init_weights)
@@ -268,15 +269,25 @@ for batch_size in batch_sizes:
                     # Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
                     scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
 
-                    train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, num_epochs)
+                    try:
+                        train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, num_epochs)
+                    except RuntimeError as e:
+                        if 'out of memory' in str(e):
+                            print("WARNING: Out of memory. Skipping grid element")
+                            # Handle the out-of-memory issue here, e.g., by reducing batch size or skipping
+                            continue
+                        else:
+                            raise e  # Re-raise the exception if it's not a memory error
+
 
                     # Evaluate the model and update best_hyperparameters if it's the best one yet
                     current_accuracy = validate(model, validation_dataloader)  # You might need to define this or modify it to suit your needs
                     if current_accuracy > best_accuracy:
                         best_accuracy = current_accuracy
-                        best_hyperparameters = (batch_size, transformer_layers, num_dense_layers, num_heads, embedding_dimensions)
+                        best_hyperparameters = (batch_size, transformer_layers, num_dense_layers, num_heads, embedding_dimension)
+
 # Grid loop ends here
 
 # Print out the best hyperparameter set and its performance
-print(f"Best Hyperparameters: Batch Size={best_hyperparameters[0]}, Transformer Layers={best_hyperparameters[1]}, Dense Layers={best_hyperparameters[2]},\n \tHeads={best_hyperparameters[3]}, Embedding dimension={best_hyperparameters[4]}")
+print(f"Best Hyperparameters:\n\tBatch Size={best_hyperparameters[0]}, Transformer Layers={best_hyperparameters[1]}, Dense Layers={best_hyperparameters[2]},\n \tHeads={best_hyperparameters[3]}, Embedding dimension={best_hyperparameters[4]}")
 print(f"Best Accuracy: {best_accuracy}")
