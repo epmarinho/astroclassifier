@@ -79,7 +79,7 @@ def init_weights(m):
 # Gets the number of classes from the dataset
 num_classes = len(class_labels)
 
-num_epochs = 30
+num_epochs = 20
 
 learning_rate = 1e-4 # Larger values caused issues
 
@@ -123,7 +123,7 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
 
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
-        viz.plot_lines('Batch Loss', epoch_loss)
+        #viz.plot_lines('Batch Loss', epoch_loss)
 
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
 predicted_labels = []
@@ -208,11 +208,17 @@ def validate(model, dataloader):
 """  **** Grid search loop ****  """
 
 # Define the grid for hyperparameters
-batch_sizes = [16, 32, 64]
-transformer_layers_options = [1, 2, 4, 6]
-num_dense_layers_options = [0, 1, 2, 3]
-num_heads_options = [2, 4, 8, 16]
-embedding_dimensions = [32, 64, 128, 256]
+batch_sizes = [32, 16]
+transformer_layers_options = [4, 2, 1]
+num_dense_layers_options = [2, 1, 0]
+num_heads_options = [16, 8, 4]
+embedding_dimensions = [64, 32, 16]
+
+print(f'\nbatch sizes = {batch_sizes}')
+print(f'transformer layers = {transformer_layers_options}')
+print(f'num dense layers = {num_dense_layers_options}')
+print(f'num heads = {num_heads_options}')
+print(f'embedding dimensions = {embedding_dimensions}')
 
 best_accuracy = 0  # Track the best accuracy
 best_hyperparameters = None  # Track the best hyperparameters
@@ -268,9 +274,9 @@ for batch_size in batch_sizes:
                     current_accuracy = validate(model, validation_dataloader)  # You might need to define this or modify it to suit your needs
                     if current_accuracy > best_accuracy:
                         best_accuracy = current_accuracy
-                        best_hyperparameters = (batch_size, transformer_layers, num_dense_layers, num_heads)
+                        best_hyperparameters = (batch_size, transformer_layers, num_dense_layers, num_heads, embedding_dimensions)
 # Grid loop ends here
 
 # Print out the best hyperparameter set and its performance
-print(f"Best Hyperparameters: Batch Size={best_hyperparameters[0]}, Transformer Layers={best_hyperparameters[1]}, Dense Layers={best_hyperparameters[2]}, Heads={best_hyperparameters[3]}")
+print(f"Best Hyperparameters: Batch Size={best_hyperparameters[0]}, Transformer Layers={best_hyperparameters[1]}, Dense Layers={best_hyperparameters[2]},\n \tHeads={best_hyperparameters[3]}, Embedding dimension={best_hyperparameters[4]}")
 print(f"Best Accuracy: {best_accuracy}")
