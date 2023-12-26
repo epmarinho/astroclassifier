@@ -48,8 +48,8 @@ def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
         print(f"Error storing class labels as attributes in H5 file: {e}")
 
 # Image dimensions
-image_size = (256,256)
-crop_size = (224,224)
+image_size = (384,384)
+crop_size = (256,256)
 
 # Padd input images to the minimal square frame
 def pad_to_square(img):

@@ -203,7 +203,6 @@ validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_si
 num_classes = len(class_labels)
 
 # Transformer Encoder Parameters
-# embedding_dimension = 128 # Dimension of the feature space, which is an important dimension for encoder attention
 embedding_dimension = 128 # Dimension of the feature space, which is an important dimension for encoder attention
 
 # dense_dims = [1024, 512, 256] # List of output dimensions for dense layers # The best for unsorted astronomical image classification

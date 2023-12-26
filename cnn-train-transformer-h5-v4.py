@@ -3,6 +3,8 @@
 # Author: Eraldo Pereira Marinho, Ph.D
 # About: The code imports cnn_transformer_core to allow Transformer+CNN to classify astronomical images
 # Creation: Jul 12, 2023
+#
+# This is a benchmark script to find out the optimal hyperparameters.
 
 import torch
 import torch.nn as nn
@@ -38,10 +40,10 @@ viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
-galaxies = np.float32(1/188)
-globular = np.float32(1/107)
-nebulae  = np.float32(1/188)
-openclust= np.float32(1/125)
+galaxies = np.float32(1/1582)
+globular = np.float32(1/498)
+nebulae  = np.float32(1/734)
+openclust= np.float32(1/450)
 # # run this before to have an actual class histogram
 # galaxies = np.float32(1)
 # globular = np.float32(1)
@@ -208,11 +210,11 @@ def validate(model, dataloader):
 """  **** Grid search loop ****  """
 
 # Define the grid for hyperparameters
-batch_sizes = [32, 16, 8]
-transformer_layers_options = [4, 2, 1]
-num_dense_layers_options = [2, 1, 0]
-num_heads_options = [16, 8, 4]
-embedding_dimensions = [128, 64, 32]
+batch_sizes = [16, 8]
+transformer_layers_options = [2, 1]
+num_dense_layers_options = [1, 0]
+num_heads_options = [16, 8]
+embedding_dimensions = [256, 128]
 
 print(f'\nbatch sizes = {batch_sizes}')
 print(f'transformer layers = {transformer_layers_options}')
@@ -239,8 +241,8 @@ for batch_size in batch_sizes:
                     cnn_out_dim = 2 * dense_dims[0]
                     cnn_out_dims = [cnn_out_dim // 8, cnn_out_dim // 4, cnn_out_dim // 2, cnn_out_dim] # List of output dimensions for convolutional layers
 
-                    #print(f'\nConvolutional layers = {cnn_out_dims}')
-                    #print(f'Full connected layers = {dense_dims}')
+                    print(f'\nConvolutional layers = {cnn_out_dims}')
+                    print(f'Full connected layers = {dense_dims}')
                     print(f'\nBatch size = {batch_size}')
                     print(f'Transformer layers = {transformer_layers}')
                     print(f'Num dense layers = {num_dense_layers}')
