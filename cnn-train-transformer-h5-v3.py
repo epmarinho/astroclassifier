@@ -14,17 +14,18 @@ import torchvision
 # import torchvision.transforms as transforms
 import visdom
 from utils import Visualizer
+import os
+import torch.nn.init as init
+import numpy as np
+# from PIL import Image
+import pillow_avif
+
 from cnn_transformer_core_h5_v3 import model
 # from cnn_transformer_core_h5_v3 import learning_rate
 from cnn_transformer_core_h5_v3 import train_dataloader
 from cnn_transformer_core_h5_v3 import validation_dataloader
 # from cnn_transformer_core_h5_v3 import num_epochs
 # from cnn_transformer_core_h5_v3 import Swish
-import os
-import torch.nn.init as init
-import numpy as np
-# from PIL import Image
-import pillow_avif
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"PyTorch device: {device}")
@@ -108,7 +109,7 @@ class EarlyStopping:
             return False  # Not enough data to decide
         return self.history[-1] <= min(self.history[:-1]) + self.threshold
 
-early_stopping = EarlyStopping(patience = 40, laziness = 25)
+early_stopping = EarlyStopping(patience = 50, laziness = 40)
 
 # Move the model to the GPU device
 model.to(device)
@@ -149,17 +150,17 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
         # Update the learning rate based on the scheduler
         scheduler.step()
 
+        if epoch % update_rate == 0:
+            validate(model, validation_loader)
+
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
         viz.plot_lines('Batch Loss', epoch_loss)
 
-        if epoch % update_rate == 0:
-            validation_loss, _ = validate(model, validation_loader)
-
         early_stopping.update_history(epoch_loss)
         if early_stopping.should_stop():
         # if early_stopping.early_stop:
-            print(f"\nEarly stopping triggered for epoch loss = {epoch_loss}\n")
+            print(f"\nEarly stopping triggered for epoch {epoch + 1} and batch loss = {epoch_loss}\n")
             break
 
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
@@ -169,6 +170,9 @@ from sklearn.metrics import confusion_matrix
 
 # Validation function
 def validate(model, dataloader):
+
+    model.eval()  # Set the model to evaluation mode
+
     # Initialize variables to keep track of counts
     true_positives = 0
     false_positives = 0
@@ -176,8 +180,6 @@ def validate(model, dataloader):
     total = 0
     total_loss = 0
     correct = 0
-
-    model.eval()  # Set the model to evaluation mode
 
     all_predicted = []
     all_true = []

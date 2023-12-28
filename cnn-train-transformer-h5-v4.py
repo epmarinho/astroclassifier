@@ -54,9 +54,11 @@ weight_class_0=galaxies/norm_denominator
 weight_class_1=globular/norm_denominator
 weight_class_2=nebulae/norm_denominator
 weight_class_3=openclust/norm_denominator
+
 # Instantiate the class weight tensor
 class_weights = torch.tensor([weight_class_0, weight_class_1, weight_class_2, weight_class_3])
 print(f"Class weights = {class_weights}")
+
 # Weights tensor must be converted to the adopted device
 class_weights = class_weights.to(device)
 
@@ -69,17 +71,32 @@ def init_weights(m):
         if m.bias is not None:
             init.constant_(m.bias, 0)
 
-def init_weights(m):
-    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-        # Initialize weights using Xavier uniform initialization
-        init.xavier_uniform_(m.weight)
-
-        # Set biases to zero if they exist
-        if m.bias is not None:
-            init.constant_(m.bias, 0)
-
 # Gets the number of classes from the dataset
 num_classes = len(class_labels)
+
+# This is basically my earling stopping proposed in previous unpublished works
+class EarlyStopping:
+    def __init__(self, patience, laziness,  threshold=.0005):
+        self.patience = patience
+        self.history = []
+        self.laziness = laziness
+        self.threshold = threshold
+
+    def update_history(self, new_loss):
+        # Update the history array with the new loss value
+        self.history.append(new_loss)
+        # Keep only the most recent 'patience' elements
+        if len(self.history) > self.patience:
+            self.history.pop(0)
+
+    def should_stop(self):
+        # Check if the minimum loss in the history is repeated or becomes smaller
+        # if len(self.history) < self.patience:
+        if len(self.history) <= self.laziness:
+            return False  # Not enough data to decide
+        return self.history[-1] <= min(self.history[:-1]) + self.threshold
+
+early_stopping = EarlyStopping(patience = 30, laziness = 20)
 
 num_epochs = 30
 
@@ -123,7 +140,13 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
         #if epoch % update_rate == 0:
             #validate(model, validation_loader)
 
-        #epoch_loss = running_loss / len(dataloader.dataset)
+        epoch_loss = running_loss / len(dataloader.dataset)
+
+        early_stopping.update_history(epoch_loss)
+        if early_stopping.should_stop():
+            print(f"\nEarly stopping triggered for epoch {epoch + 1} and batch loss = {epoch_loss}\n")
+            break
+
         #print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
         #viz.plot_lines('Batch Loss', epoch_loss)
 
@@ -210,11 +233,11 @@ def validate(model, dataloader):
 """  **** Grid search loop ****  """
 
 # Define the grid for hyperparameters
-batch_sizes = [16, 8]
-transformer_layers_options = [2, 1]
+batch_sizes = [32, 16, 8]
+transformer_layers_options = [1]
 num_dense_layers_options = [1, 0]
 num_heads_options = [16, 8]
-embedding_dimensions = [256, 128]
+embedding_dimensions = [128, 64]
 
 print(f'\nbatch sizes = {batch_sizes}')
 print(f'transformer layers = {transformer_layers_options}')
@@ -283,7 +306,7 @@ for batch_size in batch_sizes:
 
 
                     # Evaluate the model and update best_hyperparameters if it's the best one yet
-                    current_accuracy = validate(model, validation_dataloader)  # You might need to define this or modify it to suit your needs
+                    current_accuracy = validate(model, validation_dataloader)
                     if current_accuracy > best_accuracy:
                         best_accuracy = current_accuracy
                         best_hyperparameters = (batch_size, transformer_layers, num_dense_layers, num_heads, embedding_dimension)
@@ -291,5 +314,5 @@ for batch_size in batch_sizes:
 # Grid loop ends here
 
 # Print out the best hyperparameter set and its performance
-print(f"Best Hyperparameters:\n\tBatch Size={best_hyperparameters[0]}, Transformer Layers={best_hyperparameters[1]}, Dense Layers={best_hyperparameters[2]},\n \tHeads={best_hyperparameters[3]}, Embedding dimension={best_hyperparameters[4]}")
-print(f"Best Accuracy: {best_accuracy}")
+print(f"Best Hyperparameters:\nBatch Size={best_hyperparameters[0]},\nTransformer Layers={best_hyperparameters[1]},\nDense Layers={best_hyperparameters[2]},\nHeads={best_hyperparameters[3]},\nEmbedding dimension={best_hyperparameters[4]}")
+print(f"\nBest Accuracy: {best_accuracy}")

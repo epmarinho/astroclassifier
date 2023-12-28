@@ -193,7 +193,7 @@ class CNN(nn.Module):
         return x
 
 # Setup the mini-batch size
-batch_size = 16
+batch_size = 8
 
 # Create data loaders
 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -203,7 +203,8 @@ validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_si
 num_classes = len(class_labels)
 
 # Transformer Encoder Parameters
-embedding_dimension = 128 # Dimension of the feature space, which is an important dimension for encoder attention
+#embedding_dimension = 128 # Dimension of the feature space, which is an important dimension for encoder attention
+embedding_dimension = 128
 
 # dense_dims = [1024, 512, 256] # List of output dimensions for dense layers # The best for unsorted astronomical image classification
 fc_out_dim = embedding_dimension
@@ -219,5 +220,5 @@ print(f'Full connected laysers = {dense_dims}\n')
 
 cnn_model = CNN(cnn_out_dims, dense_dims)
 # The best for unsorted astronomical image classification
-model = CNNTransformer(cnn_model, num_heads = 16, transformer_layers = 1, num_dense_layers = 0)
+model = CNNTransformer(cnn_model, num_heads = 8, transformer_layers = 1, num_dense_layers = 0)
 
