@@ -55,7 +55,7 @@ class_weights = class_weights.to(device)
 
 # Training parameters
 
-num_epochs = 30
+num_epochs = 50
 
 initial_learning_rate = 1e-4 # Larger values caused issues
 
@@ -86,6 +86,30 @@ else:
 # # Check the loaded weights
 # print(model.state_dict())
 
+# This is basically my earling stopping proposed in previously unpublished works
+class EarlyStopping:
+    def __init__(self, patience=20, laziness=15,  threshold=.0005):
+        self.patience = patience
+        self.history = []
+        self.laziness = laziness
+        self.threshold = threshold
+
+    def update_history(self, new_loss):
+        # Update the history array with the new loss value
+        self.history.append(new_loss)
+        # Keep only the most recent 'patience' elements
+        if len(self.history) > self.patience:
+            self.history.pop(0)
+
+    def should_stop(self):
+        # Check if the minimum loss in the history is repeated or becomes smaller
+        # if len(self.history) < self.patience:
+        if len(self.history) <= self.laziness:
+            return False  # Not enough data to decide
+        return self.history[-1] <= min(self.history[:-1]) + self.threshold
+
+early_stopping = EarlyStopping(patience = 30, laziness = 20)
+
 # Move the model to the GPU device
 model.to(device)
 
@@ -105,6 +129,7 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
             optimizer.zero_grad()
             outputs = model(images)
             loss = criterion(outputs, labels)
+
             loss.backward()
 
             # Clip gradients
@@ -124,12 +149,18 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
         # Update the learning rate based on the scheduler
         scheduler.step()
 
-        if epoch % update_rate == 0:
-            validate(model, validation_loader)
-
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
         viz.plot_lines('Batch Loss', epoch_loss)
+
+        if epoch % update_rate == 0:
+            validation_loss, _ = validate(model, validation_loader)
+
+        early_stopping.update_history(epoch_loss)
+        if early_stopping.should_stop():
+        # if early_stopping.early_stop:
+            print(f"\nEarly stopping triggered for epoch loss = {epoch_loss}\n")
+            break
 
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
 predicted_labels = []
@@ -210,6 +241,8 @@ def validate(model, dataloader):
     viz.plot_lines('Precision', precision)
     viz.plot_lines('Recall', recall)
     viz.plot_lines('F1-scores', f1_scores)
+
+    return validation_loss, accuracy
 
 # Move the model to the GPU device before training
 model.to(device)
