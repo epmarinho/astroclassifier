@@ -33,15 +33,15 @@ viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
-galaxies = np.float32(1/1582)
-globular = np.float32(1/498)
-nebulae  = np.float32(1/734)
-openclust= np.float32(1/450)
-# # run this before to have an actual class histogram
-# galaxies = np.float32(1)
-# globular = np.float32(1)
-# nebulae  = np.float32(1)
-# openclust= np.float32(1)
+galaxies = np.float32(1/189)
+globular = np.float32(1/109)
+nebulae  = np.float32(1/190)
+openclust= np.float32(1/124)
+## run this before to have an actual class histogram (should be?)
+#galaxies = np.float32(1)
+#globular = np.float32(1)
+#nebulae  = np.float32(1)
+#openclust= np.float32(1)
 norm_denominator=galaxies + globular + nebulae + openclust
 weight_class_0=galaxies/norm_denominator
 weight_class_1=globular/norm_denominator
@@ -49,13 +49,13 @@ weight_class_2=nebulae/norm_denominator
 weight_class_3=openclust/norm_denominator
 # Instantiate the class weight tensor
 class_weights = torch.tensor([weight_class_0, weight_class_1, weight_class_2, weight_class_3])
-print(f"Class weights = {class_weights}")
+print(f"\nClass weights = {class_weights}\n")
 # Weights tensor must be converted to the adopted device
 class_weights = class_weights.to(device)
 
 # Training parameters
 
-num_epochs = 50
+num_epochs = 100
 
 initial_learning_rate = 1e-4 # Larger values caused issues
 
@@ -88,7 +88,7 @@ else:
 
 # This is basically my earling stopping proposed in previously unpublished works
 class EarlyStopping:
-    def __init__(self, patience=20, laziness=15,  threshold=.0005):
+    def __init__(self, patience=30, laziness=15,  threshold=.0005):
         self.patience = patience
         self.history = []
         self.laziness = laziness
@@ -99,7 +99,7 @@ class EarlyStopping:
         self.history.append(new_loss)
         # Keep only the most recent 'patience' elements
         if len(self.history) > self.patience:
-            self.history.pop(0)
+            self.history.pop(0) # Discard the oldest one
 
     def should_stop(self):
         # Check if the minimum loss in the history is repeated or becomes smaller
@@ -108,7 +108,7 @@ class EarlyStopping:
             return False  # Not enough data to decide
         return self.history[-1] <= min(self.history[:-1]) + self.threshold
 
-early_stopping = EarlyStopping(patience = 30, laziness = 20)
+early_stopping = EarlyStopping(patience = 40, laziness = 25)
 
 # Move the model to the GPU device
 model.to(device)
