@@ -13,7 +13,7 @@ import pillow_avif
 from torchvision.datasets import ImageFolder
 # from cnn_transformer_core_h5_v3 import batch_size
 
-batch_size = 32
+batch_size = 64
 
 # Define a function to convert a PyTorch DataLoader to H5 format
 def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
@@ -173,17 +173,14 @@ def check_images(image_folder):
                     print(f"Error loading image {image_path}: {str(e)}")
 
 # Create data loaders
-
 print("\n### Checking training images\n")
 check_images(train_data_root)
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-
 print("\n### Checking validation images\n")
 check_images(validation_data_root)
 validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=True)
 
 # Create an H5 file to store the data
-
 print("\n### Converting images data-loader to H5 format\n")
 h5file_path = "datasets.h5"
 with h5py.File(h5file_path, "w") as h5file:

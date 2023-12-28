@@ -21,9 +21,9 @@ import numpy as np
 import pillow_avif
 
 from cnn_transformer_core_h5_v3 import model
-# from cnn_transformer_core_h5_v3 import learning_rate
 from cnn_transformer_core_h5_v3 import train_dataloader
 from cnn_transformer_core_h5_v3 import validation_dataloader
+# from cnn_transformer_core_h5_v3 import learning_rate
 # from cnn_transformer_core_h5_v3 import num_epochs
 # from cnn_transformer_core_h5_v3 import Swish
 
@@ -212,6 +212,7 @@ def validate(model, dataloader):
             all_true.extend(true_labels.tolist())
 
     validation_loss = total_loss / len(dataloader)
+
     accuracy = 100 * correct / total
 
     cm = confusion_matrix(all_true, all_predicted)

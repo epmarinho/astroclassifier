@@ -56,6 +56,9 @@ validation_labels = torch.tensor(validation_labels)
 train_dataset = torch.utils.data.TensorDataset(train_data, train_labels)
 validation_dataset = torch.utils.data.TensorDataset(validation_data, validation_labels)
 
+# Gets the number of classes from the dataset
+num_classes = len(class_labels)
+
 # Define the CNN + Transformer model class
 class CNNTransformer(nn.Module):
     def __init__(self,
@@ -63,6 +66,7 @@ class CNNTransformer(nn.Module):
                  num_heads = 16,
                  transformer_layers = 6, # Number of Transformer Encoder attention layers
                  num_dense_layers = 3,
+                 embedding_dimension = 128,
                  encoder_dropout = .1,
         ):
         super(CNNTransformer, self).__init__()
@@ -127,6 +131,7 @@ class CNN(nn.Module):
     def __init__(self,
                  cnn_out_dims,
                  dense_dims,
+                 embedding_dimension = 128,
                  dropout = 0.5):
         super(CNN, self).__init__()
 
@@ -206,19 +211,21 @@ num_classes = len(class_labels)
 #embedding_dimension = 128 # Dimension of the feature space, which is an important dimension for encoder attention
 embedding_dimension = 128
 
+# Full connected layers
 # dense_dims = [1024, 512, 256] # List of output dimensions for dense layers # The best for unsorted astronomical image classification
 fc_out_dim = embedding_dimension
 dense_dims = [fc_out_dim * 4, fc_out_dim * 2, fc_out_dim] # List of output dimensions for dense layers # The best for unsorted astronomical image classification
-# Instantiate the CNN + Dense layer + Transformer
-# cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers # The best for unsorted astronomical image classification
+
+# Convolutional layers
 cnn_out_dim = 2 * dense_dims[0]
 cnn_out_dims = [cnn_out_dim // 8, cnn_out_dim // 4, cnn_out_dim // 2, cnn_out_dim] # List of output dimensions for convolutional layers
-print(f'\nEncoder attention embedding dimension = {embedding_dimension}')
+# cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers # The best for unsorted astronomical image classification
 
+print(f'\nEncoder attention embedding dimension = {embedding_dimension}')
 print(f'Convolutional layers = {cnn_out_dims}')
 print(f'Full connected laysers = {dense_dims}\n')
 
-cnn_model = CNN(cnn_out_dims, dense_dims)
+# Instantiate the CNN + Dense layer + Transformer
+cnn_model = CNN(cnn_out_dims, dense_dims, embedding_dimension)
 # The best for unsorted astronomical image classification
-model = CNNTransformer(cnn_model, num_heads = 8, transformer_layers = 1, num_dense_layers = 0)
-
+model = CNNTransformer(cnn_model, num_heads=8, transformer_layers=1, num_dense_layers=0, embedding_dimension=embedding_dimension)
