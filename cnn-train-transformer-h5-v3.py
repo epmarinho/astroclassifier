@@ -51,7 +51,7 @@ weight_class_3=openclust/norm_denominator
 # Instantiate the class weight tensor
 class_weights = torch.tensor([weight_class_0, weight_class_1, weight_class_2, weight_class_3])
 print(f"\nClass weights = {class_weights}\n")
-# Weights tensor must be converted to the adopted device
+# Weights tensor must be converted to the set device
 class_weights = class_weights.to(device)
 
 # Training parameters
@@ -80,9 +80,9 @@ else:
 #     # He initialization in PyTorch
 #     # Access all the linear layers (fully connected)
 #     # Ensure the model contains only layers that should be initialized with He
-#     # for layer in model.children():
-#     #     if isinstance(layer, nn.Linear):
-#     #         init.kaiming_normal_(layer.weight)
+    # for layer in model.children():
+    #     if isinstance(layer, nn.Linear):
+    #         init.kaiming_normal_(layer.weight)
 
 # # Check the loaded weights
 # print(model.state_dict())
