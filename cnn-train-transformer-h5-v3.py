@@ -56,7 +56,7 @@ class_weights = class_weights.to(device)
 
 # Training parameters
 
-num_epochs = 100
+num_epochs = 1000
 
 initial_learning_rate = 1e-4 # Larger values caused issues
 
@@ -66,7 +66,7 @@ optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_deca
 
 # Define a scheduler to adjust the learning rate
 # Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
-scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 
 # Check if the pretrained file exists
 model_checkpoint = "trained_cnn_model.pth"
@@ -89,33 +89,79 @@ else:
 
 # This is basically my earling stopping proposed in previously unpublished works
 class EarlyStopping:
-    def __init__(self, patience=30, laziness=15,  threshold=.0005):
-        self.patience = patience
+    def __init__(self, remembrance=30, patience=15,  threshold=.0005):
+        self.remembrance = remembrance
         self.history = []
-        self.laziness = laziness
+        self.patience = patience
         self.threshold = threshold
 
     def update_history(self, new_loss):
         # Update the history array with the new loss value
         self.history.append(new_loss)
-        # Keep only the most recent 'patience' elements
-        if len(self.history) > self.patience:
-            self.history.pop(0) # Discard the oldest one
+        # Keep only the most recent 'remembrance' elements
+        if len(self.history) > self.remembrance:
+            self.history.pop(0) # Discard the earliest one
 
     def should_stop(self):
         # Check if the minimum loss in the history is repeated or becomes smaller
-        # if len(self.history) < self.patience:
-        if len(self.history) <= self.laziness:
+        # if len(self.history) < self.remembrance:
+        if len(self.history) < self.patience:
             return False  # Not enough data to decide
         return self.history[-1] <= min(self.history[:-1]) + self.threshold
 
-early_stopping = EarlyStopping(patience = 50, laziness = 40)
+early_stopping = EarlyStopping(remembrance = 50, patience = 30)
+
+class EarlyStoppingValLoss:
+    def __init__(self, remembrance=30, patience=15,  threshold=.1):
+        self.remembrance = remembrance
+        self.history = []
+        self.patience = patience
+        self.threshold = threshold
+
+    def update_history(self, new_loss):
+        # Update the history array with the new loss value
+        self.history.append(new_loss)
+        # Keep only the most recent 'remembrance' elements
+        if len(self.history) > self.remembrance:
+            self.history.pop(0) # Discard the earliest one
+
+    def should_stop(self):
+        # Check if the minimum loss in the history is repeated or becomes smaller
+        # if len(self.history) < self.remembrance:
+        if len(self.history) < self.patience:
+            return False  # Not enough data to decide
+        return self.history[-1] >= min(self.history[:-1]) - self.threshold and self.history[-1] <= min(self.history[:-1]) + self.threshold
+
+early_stopping_valloss = EarlyStoppingValLoss(remembrance = 50, patience = 20)
+
+class EarlyStoppingAccuracy:
+    def __init__(self, remembrance=20, patience=10,  threshold=.005):
+        self.remembrance = remembrance
+        self.history = []
+        self.patience = patience
+        self.threshold = threshold
+
+    def update_history(self, new_accuracy):
+        # Update the history array with the new loss value
+        self.history.append(new_accuracy)
+        # Keep only the most recent 'remembrance' elements
+        if len(self.history) > self.remembrance:
+            self.history.pop(0) # Discard the earliest one
+
+    def should_stop(self):
+        # Check if the minimum loss in the history is repeated or becomes smaller
+        # if len(self.history) < self.remembrance:
+        if len(self.history) < self.patience:
+            return False  # Not enough data to decide
+        return self.history[-1] >= max(self.history[:-1]) - self.threshold
+
+early_stopping_accuracy = EarlyStoppingAccuracy(remembrance=50, patience=30)
 
 # Move the model to the GPU device
 model.to(device)
 
 # Training function
-update_rate = 2
+update_rate = 1
 def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
     model.train()  # Set the model to training mode
 
@@ -150,17 +196,27 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
         # Update the learning rate based on the scheduler
         scheduler.step()
 
-        if epoch % update_rate == 0:
-            validate(model, validation_loader)
-
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
         viz.plot_lines('Batch Loss', epoch_loss)
 
-        early_stopping.update_history(epoch_loss)
-        if early_stopping.should_stop():
-        # if early_stopping.early_stop:
-            print(f"\nEarly stopping triggered for epoch {epoch + 1} and batch loss = {epoch_loss}\n")
+        #early_stopping.update_history(epoch_loss)
+        #if early_stopping.should_stop():
+        ## if early_stopping.early_stop:
+            #print(f"\nEarly stopping triggered for epoch {epoch + 1} and batch loss = {epoch_loss}\n")
+            #break
+
+        if epoch % update_rate == 0:
+            validation_loss, accuracy = validate(model, validation_loader)
+
+        #early_stopping_valloss.update_history(validation_loss)
+        #if early_stopping_valloss.should_stop():
+            #print(f"\nEarly stopping triggered for epoch {epoch + 1} and validation loss = {validation_loss}\n")
+            #break
+
+        early_stopping_accuracy.update_history(accuracy)
+        if early_stopping_accuracy.should_stop():
+            print(f"\nEarly stopping triggered for epoch {epoch + 1} and accuracy = {accuracy:.2f}\n")
             break
 
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
@@ -212,6 +268,12 @@ def validate(model, dataloader):
             all_true.extend(true_labels.tolist())
 
     validation_loss = total_loss / len(dataloader)
+
+    #early_stopping.update_history(validation_loss)
+    #if early_stopping.should_stop():
+    ## if early_stopping.early_stop:
+        #print(f"\nEarly stopping triggered for validation loss = {validation_loss}\n")
+        #break
 
     accuracy = 100 * correct / total
 
