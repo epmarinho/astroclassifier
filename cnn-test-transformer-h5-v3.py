@@ -78,4 +78,4 @@ for filename in os.listdir(validation_dir):
     if response.lower() == "y":
         correct_count += 1
 
-print(f"Accuracy percentage = {100 * correct_count / total_images} %")
+print(f"Accuracy percentage = 100% * {correct_count} / {total_images} = {100 * correct_count / total_images} %")

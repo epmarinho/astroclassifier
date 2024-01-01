@@ -7,6 +7,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 import matplotlib.pyplot as plt
 import torch.optim as optim
 from torch.optim import lr_scheduler
@@ -66,7 +67,9 @@ optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_deca
 
 # Define a scheduler to adjust the learning rate
 # Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
-scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+scheduler = lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.5, verbose=True)
+scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, verbose=True)
+scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
 
 # Check if the pretrained file exists
 model_checkpoint = "trained_cnn_model.pth"
@@ -88,8 +91,8 @@ else:
 # print(model.state_dict())
 
 # This is basically my earling stopping proposed in previously unpublished works
-class EarlyStopping:
-    def __init__(self, remembrance=30, patience=15,  threshold=.0005):
+class EarlyStoppingBatch:
+    def __init__(self, remembrance=num_epochs, patience=15,  threshold=.0005):
         self.remembrance = remembrance
         self.history = []
         self.patience = patience
@@ -109,10 +112,10 @@ class EarlyStopping:
             return False  # Not enough data to decide
         return self.history[-1] <= min(self.history[:-1]) + self.threshold
 
-early_stopping = EarlyStopping(remembrance = 50, patience = 30)
+early_stopping_batch = EarlyStoppingBatch(remembrance=num_epochs, patience=30)
 
 class EarlyStoppingValLoss:
-    def __init__(self, remembrance=30, patience=15,  threshold=.1):
+    def __init__(self, remembrance=num_epochs, patience=15,  threshold=.1):
         self.remembrance = remembrance
         self.history = []
         self.patience = patience
@@ -132,10 +135,10 @@ class EarlyStoppingValLoss:
             return False  # Not enough data to decide
         return self.history[-1] >= min(self.history[:-1]) - self.threshold and self.history[-1] <= min(self.history[:-1]) + self.threshold
 
-early_stopping_valloss = EarlyStoppingValLoss(remembrance = 50, patience = 20)
+early_stopping_batch_valloss = EarlyStoppingValLoss(remembrance=num_epochs, patience=20)
 
 class EarlyStoppingAccuracy:
-    def __init__(self, remembrance=20, patience=10,  threshold=.005):
+    def __init__(self, remembrance=num_epochs, patience=10,  threshold=.005):
         self.remembrance = remembrance
         self.history = []
         self.patience = patience
@@ -155,13 +158,13 @@ class EarlyStoppingAccuracy:
             return False  # Not enough data to decide
         return self.history[-1] >= max(self.history[:-1]) - self.threshold
 
-early_stopping_accuracy = EarlyStoppingAccuracy(remembrance=50, patience=30)
+early_stopping_accuracy = EarlyStoppingAccuracy(remembrance=num_epochs, patience=15)
 
 # Move the model to the GPU device
 model.to(device)
 
 # Training function
-update_rate = 1
+#update_rate = 1
 def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
     model.train()  # Set the model to training mode
 
@@ -177,11 +180,13 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
             outputs = model(images)
             loss = criterion(outputs, labels)
 
+            # Compute gradients to be used by gradient descent in optimizer step
             loss.backward()
 
             # Clip gradients
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0) # previously, max_norm = 2
 
+            # Optimization step
             optimizer.step()
 
             # # Print or record gradients of intermediate layers
@@ -200,23 +205,27 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
         viz.plot_lines('Batch Loss', epoch_loss)
 
-        #early_stopping.update_history(epoch_loss)
-        #if early_stopping.should_stop():
-        ## if early_stopping.early_stop:
-            #print(f"\nEarly stopping triggered for epoch {epoch + 1} and batch loss = {epoch_loss}\n")
-            #break
+        early_stopping_batch.update_history(epoch_loss)
+        if early_stopping_batch.should_stop():
+            print(f"\nEarly stopping triggered for epoch {epoch + 1} and batch loss = {epoch_loss}\n")
+            break
 
-        if epoch % update_rate == 0:
-            validation_loss, accuracy = validate(model, validation_loader)
+        #if epoch % update_rate == 0:
+            #validation_loss, accuracy = validate(model, validation_loader)
+        validation_loss, accuracy = validate(model, validation_loader)
 
-        #early_stopping_valloss.update_history(validation_loss)
-        #if early_stopping_valloss.should_stop():
-            #print(f"\nEarly stopping triggered for epoch {epoch + 1} and validation loss = {validation_loss}\n")
-            #break
+        # Update the learning rate based on the scheduler
+        scheduler_by_accuracy.step(accuracy)
+        scheduler_by_valloss.step(validation_loss)
+
+        early_stopping_batch_valloss.update_history(validation_loss)
+        if early_stopping_batch_valloss.should_stop():
+            print(f"\nEarly stopping triggered for epoch {epoch + 1} and validation loss = {validation_loss}\n")
+            break
 
         early_stopping_accuracy.update_history(accuracy)
         if early_stopping_accuracy.should_stop():
-            print(f"\nEarly stopping triggered for epoch {epoch + 1} and accuracy = {accuracy:.2f}\n")
+            print(f"\nEarly stopping triggered for epoch {epoch + 1} and validation accuracy = {accuracy:.2f}\n")
             break
 
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
@@ -269,9 +278,9 @@ def validate(model, dataloader):
 
     validation_loss = total_loss / len(dataloader)
 
-    #early_stopping.update_history(validation_loss)
-    #if early_stopping.should_stop():
-    ## if early_stopping.early_stop:
+    #early_stopping_batch.update_history(validation_loss)
+    #if early_stopping_batch.should_stop():
+    ## if early_stopping_batch.early_stop:
         #print(f"\nEarly stopping triggered for validation loss = {validation_loss}\n")
         #break
 
