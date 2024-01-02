@@ -135,7 +135,7 @@ class EarlyStoppingValLoss:
             return False  # Not enough data to decide
         return self.history[-1] >= min(self.history[:-1]) - self.threshold and self.history[-1] <= min(self.history[:-1]) + self.threshold
 
-early_stopping_batch_valloss = EarlyStoppingValLoss(remembrance=num_epochs, patience=20)
+early_stopping_batch_valloss = EarlyStoppingValLoss(remembrance=num_epochs, patience=25)
 
 class EarlyStoppingAccuracy:
     def __init__(self, remembrance=num_epochs, patience=10,  threshold=.005):
@@ -158,7 +158,7 @@ class EarlyStoppingAccuracy:
             return False  # Not enough data to decide
         return self.history[-1] >= max(self.history[:-1]) - self.threshold
 
-early_stopping_accuracy = EarlyStoppingAccuracy(remembrance=num_epochs, patience=15)
+early_stopping_accuracy = EarlyStoppingAccuracy(remembrance=num_epochs, patience=20)
 
 # Move the model to the GPU device
 model.to(device)
@@ -168,7 +168,7 @@ model.to(device)
 def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
     model.train()  # Set the model to training mode
 
-    for epoch in range(num_epochs):
+    at epoch in range(num_epochs):
         running_loss = 0.0
 
         for images, labels in dataloader:
@@ -207,7 +207,7 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
 
         early_stopping_batch.update_history(epoch_loss)
         if early_stopping_batch.should_stop():
-            print(f"\nEarly stopping triggered for epoch {epoch + 1} and batch loss = {epoch_loss}\n")
+            print(f"\nEarly stopping triggered at epoch {epoch + 1} for batch loss = {epoch_loss}\n")
             break
 
         #if epoch % update_rate == 0:
@@ -220,12 +220,12 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
 
         early_stopping_batch_valloss.update_history(validation_loss)
         if early_stopping_batch_valloss.should_stop():
-            print(f"\nEarly stopping triggered for epoch {epoch + 1} and validation loss = {validation_loss}\n")
+            print(f"\nEarly stopping triggered at epoch {epoch + 1} for validation loss = {validation_loss}\n")
             break
 
         early_stopping_accuracy.update_history(accuracy)
         if early_stopping_accuracy.should_stop():
-            print(f"\nEarly stopping triggered for epoch {epoch + 1} and validation accuracy = {accuracy:.2f}\n")
+            print(f"\nEarly stopping triggered at epoch {epoch + 1} for validation accuracy = {accuracy:.2f}%\n")
             break
 
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
@@ -319,7 +319,7 @@ def validate(model, dataloader):
     return validation_loss, accuracy
 
 # Move the model to the GPU device before training
-model.to(device)
+#model.to(device)
 
 # Train the CNN+Transformer
 train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, num_epochs)
