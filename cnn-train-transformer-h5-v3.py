@@ -69,7 +69,7 @@ optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_deca
 # Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
 scheduler = lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.5, verbose=True)
 scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, verbose=True)
-scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
+#scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
 
 # Check if the pretrained file exists
 model_checkpoint = "trained_cnn_model.pth"
@@ -91,9 +91,100 @@ else:
 # print(model.state_dict())
 
 # This is basically my earling stopping proposed in previously unpublished works
+#class EarlyStoppingBatch:
+    #def __init__(self, remembrance, patience,  threshold=.005):
+        #self.remembrance = remembrance
+        #self.history = []
+        #self.patience = patience
+        ##self.patience = patience if patience <= remembrance else remembrance
+        #self.threshold = threshold
+
+    #def update_history(self, new_loss):
+        ## Update the history array with the new loss value
+        #self.history.append(new_loss)
+        ## Keep only the most recent 'remembrance' elements
+        #if len(self.history) > self.remembrance:
+            #self.history.pop(0) # Discard the earliest one
+
+    #def should_stop(self):
+        ## Check if the minimum loss in the history is repeated or becomes smaller
+        ## if len(self.history) < self.remembrance:
+        #if len(self.history) < self.patience and self.remembrance >= self.patience:
+            #return False  # Not enough data to decide
+        #if len(self.history) < self.remembrance and self.remembrance < self.patience:
+            #return False
+        #return self.history[-1] <= min(self.history[:-1]) + self.threshold
+
+#early_stopping_batch = EarlyStoppingBatch(remembrance=20, patience=30)
+
+#class EarlyStoppingValLoss:
+    #def __init__(self, remembrance, patience,  threshold=.005):
+        #self.remembrance = remembrance
+        #self.history = []
+        #self.patience = patience
+        ##self.patience = patience if patience <= remembrance else remembrance
+        #self.threshold = threshold
+
+    #def update_history(self, new_loss):
+        ## Update the history array with the new loss value
+        #self.history.append(new_loss)
+        ## Keep only the most recent 'remembrance' elements
+        #if len(self.history) > self.remembrance:
+            #self.history.pop(0) # Discard the earliest one
+
+    ##def should_stop(self):
+        ### Check if the minimum loss in the history is repeated or becomes smaller
+        ### if len(self.history) < self.remembrance:
+        ##if len(self.history) < self.patience:
+            ##return False  # Not enough data to decide
+        ##return min(self.history[:-1]) - self.threshold <= self.history[-1] <= min(self.history[:-1]) + self.threshold
+
+    #def should_stop(self):
+        ## Check if we have enough data to make a decision
+        #if len(self.history) < self.patience and self.remembrance >= self.patience:
+            #return False  # Not enough data to decide
+        #if len(self.history) < self.remembrance and self.remembrance < self.patience:
+            #return False
+
+        ## Check the best loss so far
+        #min_loss = min(self.history[:-1])
+
+        ## Check if the loss has not improved significantly for 'patience' epochs
+        #plateau_count = sum(1 for x in self.history[-self.patience:] if min_loss - self.threshold <= x <= min_loss + self.threshold)
+
+        ## If the loss has been on a plateau for 'patience' consecutive epochs, stop
+        #return plateau_count >= self.patience
+
+#early_stopping_valloss = EarlyStoppingValLoss(remembrance=20, patience=25)
+
+#class EarlyStoppingAccuracy:
+    #def __init__(self, remembrance, patience,  threshold=.0005):
+        #self.remembrance = remembrance
+        #self.history = []
+        #self.patience = patience
+        ##self.patience = patience if patience <= remembrance else remembrance
+        #self.threshold = threshold
+
+    #def update_history(self, new_accuracy):
+        ## Update the history array with the new loss value
+        #self.history.append(new_accuracy)
+        ## Keep only the most recent 'remembrance' elements
+        #if len(self.history) > self.remembrance:
+            #self.history.pop(0) # Discard the earliest one
+
+    #def should_stop(self):
+        ## Check if the minimum loss in the history is repeated or becomes smaller
+        ## if len(self.history) < self.remembrance:
+        #if len(self.history) < self.patience and self.remembrance >= self.patience:
+            #return False  # Not enough data to decide
+        #if len(self.history) < self.remembrance and self.remembrance < self.patience:
+            #return False
+        #return self.history[-1] >= max(self.history[:-1]) - self.threshold
+
+#early_stopping_accuracy = EarlyStoppingAccuracy(remembrance=20, patience=20)
+
 class EarlyStoppingBatch:
-    def __init__(self, remembrance=num_epochs, patience=15,  threshold=.0005):
-        self.remembrance = remembrance
+    def __init__(self, patience,  threshold=.005):
         self.history = []
         self.patience = patience
         self.threshold = threshold
@@ -101,22 +192,19 @@ class EarlyStoppingBatch:
     def update_history(self, new_loss):
         # Update the history array with the new loss value
         self.history.append(new_loss)
-        # Keep only the most recent 'remembrance' elements
-        if len(self.history) > self.remembrance:
+        if len(self.history) > self.patience:
             self.history.pop(0) # Discard the earliest one
 
     def should_stop(self):
         # Check if the minimum loss in the history is repeated or becomes smaller
-        # if len(self.history) < self.remembrance:
         if len(self.history) < self.patience:
             return False  # Not enough data to decide
         return self.history[-1] <= min(self.history[:-1]) + self.threshold
 
-early_stopping_batch = EarlyStoppingBatch(remembrance=num_epochs, patience=30)
+early_stopping_batch = EarlyStoppingBatch(patience=30)
 
 class EarlyStoppingValLoss:
-    def __init__(self, remembrance=num_epochs, patience=15,  threshold=.1):
-        self.remembrance = remembrance
+    def __init__(self, patience,  threshold=.005):
         self.history = []
         self.patience = patience
         self.threshold = threshold
@@ -125,21 +213,27 @@ class EarlyStoppingValLoss:
         # Update the history array with the new loss value
         self.history.append(new_loss)
         # Keep only the most recent 'remembrance' elements
-        if len(self.history) > self.remembrance:
+        if len(self.history) > self.patience:
             self.history.pop(0) # Discard the earliest one
 
     def should_stop(self):
-        # Check if the minimum loss in the history is repeated or becomes smaller
-        # if len(self.history) < self.remembrance:
+        # Check if we have enough data to make a decision
         if len(self.history) < self.patience:
             return False  # Not enough data to decide
-        return self.history[-1] >= min(self.history[:-1]) - self.threshold and self.history[-1] <= min(self.history[:-1]) + self.threshold
 
-early_stopping_batch_valloss = EarlyStoppingValLoss(remembrance=num_epochs, patience=25)
+        # Check the best loss so far
+        min_loss = min(self.history[:-1])
+
+        # Check if the loss has not improved significantly for 'patience' epochs
+        plateau_count = sum(1 for x in self.history[-self.patience:] if min_loss - self.threshold <= x <= min_loss + self.threshold)
+
+        # If the loss has been on a plateau for 'patience' consecutive epochs, stop
+        return plateau_count >= self.patience
+
+early_stopping_valloss = EarlyStoppingValLoss(patience=25)
 
 class EarlyStoppingAccuracy:
-    def __init__(self, remembrance=num_epochs, patience=10,  threshold=.005):
-        self.remembrance = remembrance
+    def __init__(self, patience,  threshold=.0005):
         self.history = []
         self.patience = patience
         self.threshold = threshold
@@ -148,7 +242,7 @@ class EarlyStoppingAccuracy:
         # Update the history array with the new loss value
         self.history.append(new_accuracy)
         # Keep only the most recent 'remembrance' elements
-        if len(self.history) > self.remembrance:
+        if len(self.history) > self.patience:
             self.history.pop(0) # Discard the earliest one
 
     def should_stop(self):
@@ -158,7 +252,7 @@ class EarlyStoppingAccuracy:
             return False  # Not enough data to decide
         return self.history[-1] >= max(self.history[:-1]) - self.threshold
 
-early_stopping_accuracy = EarlyStoppingAccuracy(remembrance=num_epochs, patience=20)
+early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
 
 # Move the model to the GPU device
 model.to(device)
@@ -168,7 +262,7 @@ model.to(device)
 def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
     model.train()  # Set the model to training mode
 
-    at epoch in range(num_epochs):
+    for epoch in range(num_epochs):
         running_loss = 0.0
 
         for images, labels in dataloader:
@@ -216,10 +310,10 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
 
         # Update the learning rate based on the scheduler
         scheduler_by_accuracy.step(accuracy)
-        scheduler_by_valloss.step(validation_loss)
+        #scheduler_by_valloss.step(validation_loss)
 
-        early_stopping_batch_valloss.update_history(validation_loss)
-        if early_stopping_batch_valloss.should_stop():
+        early_stopping_valloss.update_history(validation_loss)
+        if early_stopping_valloss.should_stop():
             print(f"\nEarly stopping triggered at epoch {epoch + 1} for validation loss = {validation_loss}\n")
             break
 

@@ -9,13 +9,14 @@
 import torch
 import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 import matplotlib.pyplot as plt
 import torch.optim as optim
 from torch.optim import lr_scheduler
 import torchvision
 # import torchvision.transforms as transforms
-import visdom
-from utils import Visualizer
+#import visdom
+#from utils import Visualizer
 #from cnn_transformer_core_h5_v4 import model
 #from cnn_transformer_core_h5_v4 import num_heads
 #from cnn_transformer_core_h5_v4 import train_dataloader
@@ -36,7 +37,7 @@ from sklearn.metrics import confusion_matrix
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"PyTorch device: {device}")
 
-viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
+#viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
@@ -74,31 +75,74 @@ def init_weights(m):
 # Gets the number of classes from the dataset
 num_classes = len(class_labels)
 
-# This is basically my earling stopping proposed in previous unpublished works
-class EarlyStopping:
-    def __init__(self, patience, laziness,  threshold=.0005):
-        self.patience = patience
+num_epochs = 100
+
+# This is basically my earling stopping proposed in previously unpublished works
+
+class EarlyStoppingBatch:
+    def __init__(self, patience,  threshold=.005):
         self.history = []
-        self.laziness = laziness
+        self.patience = patience
         self.threshold = threshold
 
     def update_history(self, new_loss):
         # Update the history array with the new loss value
         self.history.append(new_loss)
-        # Keep only the most recent 'patience' elements
         if len(self.history) > self.patience:
-            self.history.pop(0)
+            self.history.pop(0) # Discard the earliest one
 
     def should_stop(self):
         # Check if the minimum loss in the history is repeated or becomes smaller
-        # if len(self.history) < self.patience:
-        if len(self.history) <= self.laziness:
+        if len(self.history) < self.patience:
             return False  # Not enough data to decide
         return self.history[-1] <= min(self.history[:-1]) + self.threshold
 
-early_stopping = EarlyStopping(patience = 30, laziness = 20)
+class EarlyStoppingValLoss:
+    def __init__(self, patience,  threshold=.005):
+        self.history = []
+        self.patience = patience
+        self.threshold = threshold
 
-num_epochs = 30
+    def update_history(self, new_loss):
+        # Update the history array with the new loss value
+        self.history.append(new_loss)
+        # Keep only the most recent 'remembrance' elements
+        if len(self.history) > self.patience:
+            self.history.pop(0) # Discard the earliest one
+
+    def should_stop(self):
+        # Check if we have enough data to make a decision
+        if len(self.history) < self.patience:
+            return False  # Not enough data to decide
+
+        # Check the best loss so far
+        min_loss = min(self.history[:-1])
+
+        # Check if the loss has not improved significantly for 'patience' epochs
+        plateau_count = sum(1 for x in self.history[-self.patience:] if min_loss - self.threshold <= x <= min_loss + self.threshold)
+
+        # If the loss has been on a plateau for 'patience' consecutive epochs, stop
+        return plateau_count >= self.patience
+
+class EarlyStoppingAccuracy:
+    def __init__(self, patience,  threshold=.0005):
+        self.history = []
+        self.patience = patience
+        self.threshold = threshold
+
+    def update_history(self, new_accuracy):
+        # Update the history array with the new loss value
+        self.history.append(new_accuracy)
+        # Keep only the most recent 'remembrance' elements
+        if len(self.history) > self.patience:
+            self.history.pop(0) # Discard the earliest one
+
+    def should_stop(self):
+        # Check if the minimum loss in the history is repeated or becomes smaller
+        # if len(self.history) < self.remembrance:
+        if len(self.history) < self.patience:
+            return False  # Not enough data to decide
+        return self.history[-1] >= max(self.history[:-1]) - self.threshold
 
 learning_rate = 1e-4 # Larger values caused issues
 
@@ -121,7 +165,7 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
             loss.backward()
 
             # Clip gradients
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
             optimizer.step()
 
@@ -141,10 +185,26 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
             #validate(model, validation_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
+        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
+        #viz.plot_lines('Batch Loss', epoch_loss)
 
-        early_stopping.update_history(epoch_loss)
-        if early_stopping.should_stop():
-            print(f"\nEarly stopping triggered for epoch {epoch + 1} and batch loss = {epoch_loss}\n")
+        early_stopping_batch.update_history(epoch_loss)
+        if early_stopping_batch.should_stop():
+            print(f"\nEarly stopping triggered at epoch {epoch + 1} for batch loss = {epoch_loss}\n")
+            break
+
+        validation_loss, accuracy = validate(model, validation_loader)
+
+        scheduler_by_valloss.step(validation_loss)
+        early_stopping_valloss.update_history(validation_loss)
+        if early_stopping_valloss.should_stop():
+            print(f"\nEarly stopping triggered at epoch {epoch + 1} for validation loss = {validation_loss}\n")
+            break
+
+        scheduler_by_accuracy.step(accuracy)
+        early_stopping_accuracy.update_history(accuracy)
+        if early_stopping_accuracy.should_stop():
+            print(f"\nEarly stopping triggered at epoch {epoch + 1} for validation accuracy = {accuracy:.2f}%\n")
             break
 
         #print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
@@ -154,7 +214,17 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
 predicted_labels = []
 
 # Validation function
+
+# The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
+predicted_labels = []
+
+from sklearn.metrics import confusion_matrix
+
+# Validation function
 def validate(model, dataloader):
+
+    model.eval()  # Set the model to evaluation mode
+
     # Initialize variables to keep track of counts
     true_positives = 0
     false_positives = 0
@@ -162,8 +232,6 @@ def validate(model, dataloader):
     total = 0
     total_loss = 0
     correct = 0
-
-    model.eval()  # Set the model to evaluation mode
 
     all_predicted = []
     all_true = []
@@ -196,6 +264,13 @@ def validate(model, dataloader):
             all_true.extend(true_labels.tolist())
 
     validation_loss = total_loss / len(dataloader)
+
+    #early_stopping_batch.update_history(validation_loss)
+    #if early_stopping_batch.should_stop():
+    ## if early_stopping_batch.early_stop:
+        #print(f"\nEarly stopping triggered for validation loss = {validation_loss}\n")
+        #break
+
     accuracy = 100 * correct / total
 
     cm = confusion_matrix(all_true, all_predicted)
@@ -218,32 +293,32 @@ def validate(model, dataloader):
         recall.append(recall_i)
         f1_scores.append(f1_i)
 
-    #print(f'Validation Loss: {validation_loss:.6f}, Validation Accuracy: {accuracy:.2f}%')
-    #print(f'Precision per class: {precision}')
-    #print(f'Recall per class: {recall}')
-    #print(f'F1-score per class: {f1_scores}')
+    print(f'Validation Loss: {validation_loss:.6f}, Validation Accuracy: {accuracy:.2f}%')
+    print(f'Precision per class: {precision}')
+    print(f'Recall per class: {recall}')
+    print(f'F1-score per class: {f1_scores}')
     #viz.plot_lines('Validation Loss', validation_loss)
     #viz.plot_lines('Validation Accuracy', accuracy)
     #viz.plot_lines('Precision', precision)
     #viz.plot_lines('Recall', recall)
     #viz.plot_lines('F1-scores', f1_scores)
 
-    return accuracy
+    return validation_loss, accuracy
 
 """  **** Grid search loop ****  """
 
 # Define the grid for hyperparameters
 batch_sizes = [32, 16, 8]
-transformer_layers_options = [1]
-num_dense_layers_options = [1, 0]
-num_heads_options = [16, 8]
-embedding_dimensions = [128, 64]
+transformer_layers_options = [2, 1]
+num_dense_layers_options = [2, 0]
+num_heads_options = [16, 8, 4]
+embedding_dimensions = [128, 64, 32]
 
 print(f'\nbatch sizes = {batch_sizes}')
 print(f'transformer layers = {transformer_layers_options}')
 print(f'num dense layers = {num_dense_layers_options}')
 print(f'num heads = {num_heads_options}')
-print(f'embedding dimensions = {embedding_dimensions}')
+print(f'embedding dimensions = {embedding_dimensions}\n')
 
 best_accuracy = 0  # Track the best accuracy
 best_hyperparameters = None  # Track the best hyperparameters
@@ -266,7 +341,7 @@ for batch_size in batch_sizes:
 
                     print(f'\nConvolutional layers = {cnn_out_dims}')
                     print(f'Full connected layers = {dense_dims}')
-                    print(f'\nBatch size = {batch_size}')
+                    print(f'Batch size = {batch_size}')
                     print(f'Transformer layers = {transformer_layers}')
                     print(f'Num dense layers = {num_dense_layers}')
                     print(f'Num heads = {num_heads}')
@@ -292,8 +367,17 @@ for batch_size in batch_sizes:
 
                     # Define a scheduler to adjust the learning rate
                     # Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
-                    scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+                    #scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+                    scheduler = lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.5, verbose=True)
+                    scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, verbose=True)
+                    scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
 
+                    # Reinstanciando os objetos de early stopping
+                    early_stopping_batch = EarlyStoppingBatch(patience=30)
+                    early_stopping_valloss = EarlyStoppingValLoss(patience=25)
+                    early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
+
+                    # This snippet was proposed by Chat GPT-4
                     try:
                         train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, num_epochs)
                     except RuntimeError as e:
@@ -304,9 +388,8 @@ for batch_size in batch_sizes:
                         else:
                             raise e  # Re-raise the exception if it's not a memory error
 
-
                     # Evaluate the model and update best_hyperparameters if it's the best one yet
-                    current_accuracy = validate(model, validation_dataloader)
+                    _, current_accuracy = validate(model, validation_dataloader)
                     if current_accuracy > best_accuracy:
                         best_accuracy = current_accuracy
                         best_hyperparameters = (batch_size, transformer_layers, num_dense_layers, num_heads, embedding_dimension)
@@ -314,5 +397,5 @@ for batch_size in batch_sizes:
 # Grid loop ends here
 
 # Print out the best hyperparameter set and its performance
-print(f"Best Hyperparameters:\nBatch Size={best_hyperparameters[0]},\nTransformer Layers={best_hyperparameters[1]},\nDense Layers={best_hyperparameters[2]},\nHeads={best_hyperparameters[3]},\nEmbedding dimension={best_hyperparameters[4]}")
+print(f"\nBest Hyperparameters:\nBatch Size={best_hyperparameters[0]},\nTransformer Layers={best_hyperparameters[1]},\nDense Layers={best_hyperparameters[2]},\nHeads={best_hyperparameters[3]},\nEmbedding dimension={best_hyperparameters[4]}")
 print(f"\nBest Accuracy: {best_accuracy}")
