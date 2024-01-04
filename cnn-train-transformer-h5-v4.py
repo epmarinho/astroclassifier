@@ -14,14 +14,6 @@ import matplotlib.pyplot as plt
 import torch.optim as optim
 from torch.optim import lr_scheduler
 import torchvision
-# import torchvision.transforms as transforms
-#import visdom
-#from utils import Visualizer
-#from cnn_transformer_core_h5_v4 import model
-#from cnn_transformer_core_h5_v4 import num_heads
-#from cnn_transformer_core_h5_v4 import train_dataloader
-#from cnn_transformer_core_h5_v4 import validation_dataloader
-#from cnn_transformer_core_h5_v4 import batch_size
 from cnn_transformer_core_h5_v4 import class_labels
 from cnn_transformer_core_h5_v4 import train_dataset
 from cnn_transformer_core_h5_v4 import validation_dataset
@@ -36,8 +28,6 @@ from sklearn.metrics import confusion_matrix
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"PyTorch device: {device}")
-
-#viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
@@ -77,8 +67,7 @@ num_classes = len(class_labels)
 
 num_epochs = 100
 
-# This is basically my earling stopping proposed in previously unpublished works
-
+# These are basically my earling stopping proposed in previously unpublished works
 class EarlyStoppingBatch:
     def __init__(self, patience,  threshold=.005):
         self.history = []
@@ -133,13 +122,11 @@ class EarlyStoppingAccuracy:
     def update_history(self, new_accuracy):
         # Update the history array with the new loss value
         self.history.append(new_accuracy)
-        # Keep only the most recent 'remembrance' elements
         if len(self.history) > self.patience:
             self.history.pop(0) # Discard the earliest one
 
     def should_stop(self):
         # Check if the minimum loss in the history is repeated or becomes smaller
-        # if len(self.history) < self.remembrance:
         if len(self.history) < self.patience:
             return False  # Not enough data to decide
         return self.history[-1] >= max(self.history[:-1]) - self.threshold
@@ -147,7 +134,6 @@ class EarlyStoppingAccuracy:
 learning_rate = 1e-4 # Larger values caused issues
 
 # Training function
-#update_rate = 2
 def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
     model.train()  # Set the model to training mode
 
@@ -169,20 +155,10 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
 
             optimizer.step()
 
-            # # Print or record gradients of intermediate layers
-            # for name, param in model.named_parameters():
-            #     if param.requires_grad and 'weight' in name:
-            #         grdnorm = param.grad.norm().item()
-            #         if grdnorm < 0.01:
-            #             print(f'Layer: {name}, Grad norm: {grdnorm}')
-
             running_loss += loss.item() * images.size(0)
 
         # Update the learning rate based on the scheduler
         scheduler.step()
-
-        #if epoch % update_rate == 0:
-            #validate(model, validation_loader)
 
         epoch_loss = running_loss / len(dataloader.dataset)
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
@@ -206,9 +182,6 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
         if early_stopping_accuracy.should_stop():
             print(f"\nEarly stopping triggered at epoch {epoch + 1} for validation accuracy = {accuracy:.2f}%\n")
             break
-
-        #print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
-        #viz.plot_lines('Batch Loss', epoch_loss)
 
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
 predicted_labels = []
@@ -308,11 +281,11 @@ def validate(model, dataloader):
 """  **** Grid search loop ****  """
 
 # Define the grid for hyperparameters
-batch_sizes = [32, 16, 8]
-transformer_layers_options = [2, 1]
+batch_sizes = [32, 16]
+transformer_layers_options = [1]
 num_dense_layers_options = [2, 0]
-num_heads_options = [16, 8, 4]
-embedding_dimensions = [128, 64, 32]
+num_heads_options = [16, 8]
+embedding_dimensions = [128]
 
 print(f'\nbatch sizes = {batch_sizes}')
 print(f'transformer layers = {transformer_layers_options}')
@@ -365,19 +338,18 @@ for batch_size in batch_sizes:
                     criterion = nn.CrossEntropyLoss(weight=class_weights)
                     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=.5e-6)
 
-                    # Define a scheduler to adjust the learning rate
-                    # Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
-                    #scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
-                    scheduler = lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.5, verbose=True)
+                    # Re-instantiating different schedulers to adjust the learning rate
+                    scheduler = lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.5, verbose=True)
+                    # More radical decrease in case of plateau detection
                     scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, verbose=True)
                     scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
 
-                    # Reinstanciando os objetos de early stopping
-                    early_stopping_batch = EarlyStoppingBatch(patience=30)
+                    # Re-instantiating the objects of early stopping
+                    early_stopping_batch = EarlyStoppingBatch(patience=60)
                     early_stopping_valloss = EarlyStoppingValLoss(patience=25)
                     early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
 
-                    # This snippet was proposed by Chat GPT-4
+                    # This snippet was proposed by Chat GPT-4 to avoid exiting on out-of-memory runtime error
                     try:
                         train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, num_epochs)
                     except RuntimeError as e:

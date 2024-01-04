@@ -228,4 +228,4 @@ print(f'Full connected laysers = {dense_dims}\n')
 # Instantiate the CNN + Dense layer + Transformer
 cnn_model = CNN(cnn_out_dims, dense_dims, embedding_dimension)
 # The best for unsorted astronomical image classification
-model = CNNTransformer(cnn_model, num_heads=16, transformer_layers=1, num_dense_layers=0, embedding_dimension=embedding_dimension)
+model = CNNTransformer(cnn_model, num_heads=8, transformer_layers=1, num_dense_layers=2, embedding_dimension=embedding_dimension)

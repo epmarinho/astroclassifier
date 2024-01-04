@@ -59,17 +59,17 @@ class_weights = class_weights.to(device)
 
 num_epochs = 1000
 
-initial_learning_rate = 1e-4 # Larger values caused issues
+initial_learning_rate = 1e-4 # Larger values doesn't work
 
 # Define the loss function and optimizer
 criterion = nn.CrossEntropyLoss(weight=class_weights)
-optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=.5e-6)
+optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=.5e-5)
 
 # Define a scheduler to adjust the learning rate
 # Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
-scheduler = lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.5, verbose=True)
+scheduler = lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.5, verbose=True)
 scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, verbose=True)
-#scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
+scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
 
 # Check if the pretrained file exists
 model_checkpoint = "trained_cnn_model.pth"
@@ -147,10 +147,10 @@ else:
             #return False
 
         ## Check the best loss so far
-        #min_loss = min(self.history[:-1])
+        #max_accuracy = min(self.history[:-1])
 
         ## Check if the loss has not improved significantly for 'patience' epochs
-        #plateau_count = sum(1 for x in self.history[-self.patience:] if min_loss - self.threshold <= x <= min_loss + self.threshold)
+        #plateau_count = sum(1 for x in self.history[-self.patience:] if max_accuracy - self.threshold <= x <= max_accuracy + self.threshold)
 
         ## If the loss has been on a plateau for 'patience' consecutive epochs, stop
         #return plateau_count >= self.patience
@@ -184,73 +184,142 @@ else:
 #early_stopping_accuracy = EarlyStoppingAccuracy(remembrance=20, patience=20)
 
 class EarlyStoppingBatch:
-    def __init__(self, patience,  threshold=.005):
-        self.history = []
-        self.patience = patience
-        self.threshold = threshold
+    def __init__(self, patience=30, threshold=.005):
+        """
+        Initialize the EarlyStoppingBatch object.
+
+        Parameters:
+        - patience: int, number of epochs with no improvement after which training will be stopped.
+        - threshold: float, the minimum change in the monitored quantity to qualify as an improvement.
+        """
+        self.history = []  # List to store the history of loss values
+        self.patience = patience  # How many epochs to wait before stopping
+        self.threshold = threshold  # The threshold for determining if the model has improved
 
     def update_history(self, new_loss):
-        # Update the history array with the new loss value
-        self.history.append(new_loss)
+        """
+        Update the history list with the new loss value.
+
+        Parameters:
+        - new_loss: float, the loss value from the current epoch.
+        """
+        self.history.append(new_loss)  # Add the new loss to the history
         if len(self.history) > self.patience:
-            self.history.pop(0) # Discard the earliest one
+            self.history.pop(0)  # Remove the oldest loss if history exceeds patience
 
     def should_stop(self):
-        # Check if the minimum loss in the history is repeated or becomes smaller
+        """
+        Determine if training should be stopped.
+
+        Returns:
+        - Boolean, True if training should be stopped, False otherwise.
+        """
         if len(self.history) < self.patience:
-            return False  # Not enough data to decide
+            return False  # Not enough data to decide, continue training
+        # Stop if the most recent loss is not significantly lower than the best previous loss
         return self.history[-1] <= min(self.history[:-1]) + self.threshold
 
 early_stopping_batch = EarlyStoppingBatch(patience=30)
 
 class EarlyStoppingValLoss:
-    def __init__(self, patience,  threshold=.005):
-        self.history = []
-        self.patience = patience
-        self.threshold = threshold
+    def __init__(self, patience=30, threshold=.005):
+        """
+        Initialize the EarlyStoppingValLoss object.
+
+        Parameters:
+        - patience: int, number of epochs with no improvement after which training will be stopped.
+        - threshold: float, the minimum change in the monitored quantity to qualify as an improvement.
+        """
+        self.history = []  # List to store the history of validation loss values
+        self.patience = patience  # How many epochs to wait before stopping
+        self.threshold = threshold  # The threshold for determining if the model has improved
 
     def update_history(self, new_loss):
-        # Update the history array with the new loss value
-        self.history.append(new_loss)
-        # Keep only the most recent 'remembrance' elements
+        """
+        Update the history list with the new validation loss value.
+
+        Parameters:
+        - new_loss: float, the validation loss value from the current epoch.
+        """
+        self.history.append(new_loss)  # Add the new validation loss to the history
         if len(self.history) > self.patience:
-            self.history.pop(0) # Discard the earliest one
+            self.history.pop(0)  # Remove the oldest loss if history exceeds patience
 
     def should_stop(self):
-        # Check if we have enough data to make a decision
+        """
+        Determine if training should be stopped based on validation loss.
+
+        Returns:
+        - Boolean, True if training should be stopped, False otherwise.
+        """
         if len(self.history) < self.patience:
-            return False  # Not enough data to decide
+            return False  # Not enough data to decide, continue training
 
         # Check the best loss so far
-        min_loss = min(self.history[:-1])
+        max_accuracy = min(self.history[:-1])
 
-        # Check if the loss has not improved significantly for 'patience' epochs
-        plateau_count = sum(1 for x in self.history[-self.patience:] if min_loss - self.threshold <= x <= min_loss + self.threshold)
+        # Count how many recent losses are within the threshold of the best loss
+        plateau_count = sum(1 for x in self.history[-self.patience:] if max_accuracy - self.threshold <= x <= max_accuracy + self.threshold)
 
-        # If the loss has been on a plateau for 'patience' consecutive epochs, stop
+        # Stop if the loss hasn't improved for 'patience' consecutive epochs
         return plateau_count >= self.patience
 
-early_stopping_valloss = EarlyStoppingValLoss(patience=25)
+early_stopping_valloss = EarlyStoppingValLoss(patience=20)
 
 class EarlyStoppingAccuracy:
-    def __init__(self, patience,  threshold=.0005):
-        self.history = []
-        self.patience = patience
-        self.threshold = threshold
+    def __init__(self, patience=30, threshold=.005):
+        """
+        Initialize the EarlyStoppingAccuracy object.
+
+        Parameters:
+        - patience: int, number of epochs with no improvement after which training will be stopped.
+        - threshold: float, the minimum change in the monitored quantity to qualify as an improvement.
+        """
+        self.history = []  # List to store the history of accuracy values
+        self.patience = patience  # How many epochs to wait before stopping
+        self.threshold = threshold  # The threshold for determining if the model has improved
 
     def update_history(self, new_accuracy):
-        # Update the history array with the new loss value
-        self.history.append(new_accuracy)
-        # Keep only the most recent 'remembrance' elements
+        """
+        Update the history list with the new accuracy value.
+
+        Parameters:
+        - new_accuracy: float, the accuracy value from the current epoch.
+        """
+        self.history.append(new_accuracy)  # Add the new accuracy to the history
         if len(self.history) > self.patience:
-            self.history.pop(0) # Discard the earliest one
+            self.history.pop(0)  # Remove the oldest accuracy if history exceeds patience
+
+    #def should_stop(self):
+        #"""
+        #Determine if training should be stopped based on accuracy.
+
+        #Returns:
+        #- Boolean, True if training should be stopped, False otherwise.
+        #"""
+        #if len(self.history) < self.patience:
+            #return False  # Not enough data to decide, continue training
+        ## Stop if the most recent accuracy is not significantly higher than the best previous accuracy
+        #return self.history[-1] >= max(self.history[:-1]) - self.threshold
 
     def should_stop(self):
-        # Check if the minimum loss in the history is repeated or becomes smaller
-        # if len(self.history) < self.remembrance:
+        """
+        Determine if training should be stopped based on validation loss.
+
+        Returns:
+        - Boolean, True if training should be stopped, False otherwise.
+        """
         if len(self.history) < self.patience:
-            return False  # Not enough data to decide
-        return self.history[-1] >= max(self.history[:-1]) - self.threshold
+            return False  # Not enough data to decide, continue training
+
+        # Check the best loss so far
+        max_accuracy = max(self.history[:-1])
+
+        # Count how many recent losses are within the threshold of the best loss
+        plateau_count = sum(1 for x in self.history[-self.patience:] if max_accuracy - self.threshold <= x <= max_accuracy + self.threshold)
+
+        # Stop if the loss hasn't improved for 'patience' consecutive epochs
+        return plateau_count >= self.patience
 
 early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
 
@@ -258,7 +327,6 @@ early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
 model.to(device)
 
 # Training function
-#update_rate = 1
 def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
     model.train()  # Set the model to training mode
 
@@ -304,13 +372,7 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
             print(f"\nEarly stopping triggered at epoch {epoch + 1} for batch loss = {epoch_loss}\n")
             break
 
-        #if epoch % update_rate == 0:
-            #validation_loss, accuracy = validate(model, validation_loader)
         validation_loss, accuracy = validate(model, validation_loader)
-
-        # Update the learning rate based on the scheduler
-        scheduler_by_accuracy.step(accuracy)
-        #scheduler_by_valloss.step(validation_loss)
 
         early_stopping_valloss.update_history(validation_loss)
         if early_stopping_valloss.should_stop():
@@ -321,6 +383,10 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
         if early_stopping_accuracy.should_stop():
             print(f"\nEarly stopping triggered at epoch {epoch + 1} for validation accuracy = {accuracy:.2f}%\n")
             break
+
+        # Update the learning rate based on the scheduler
+        scheduler_by_accuracy.step(accuracy)
+        scheduler_by_valloss.step(validation_loss)
 
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
 predicted_labels = []
