@@ -21,6 +21,9 @@ import numpy as np
 # from PIL import Image
 import pillow_avif
 
+# Set a seed by hand to avoid unpredictable results
+torch.manual_seed(3908274565)
+
 from cnn_transformer_core_h5_v3 import model
 from cnn_transformer_core_h5_v3 import train_dataloader
 from cnn_transformer_core_h5_v3 import validation_dataloader
@@ -59,17 +62,16 @@ class_weights = class_weights.to(device)
 
 num_epochs = 1000
 
-initial_learning_rate = 1e-4 # Larger values doesn't work
+initial_learning_rate = 1e-4 # Larger values don't work
 
 # Define the loss function and optimizer
-criterion = nn.CrossEntropyLoss(weight=class_weights)
-optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=.5e-5)
+loss_func = nn.CrossEntropyLoss(weight=class_weights)
+optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=.5e-6)
 
-# Define a scheduler to adjust the learning rate
-# Here, a StepLR scheduler is used, which reduces the learning rate by a gamma factor after a fixed number of epochs
-scheduler = lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.5, verbose=True)
-scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, verbose=True)
-scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
+# Define a scheduler to adjust the learning rate for each peculiarity
+scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5, verbose=True)
+scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5, verbose=True)
+scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True)
 
 # Check if the pretrained file exists
 model_checkpoint = "trained_cnn_model.pth"
@@ -219,7 +221,7 @@ class EarlyStoppingBatch:
         # Stop if the most recent loss is not significantly lower than the best previous loss
         return self.history[-1] <= min(self.history[:-1]) + self.threshold
 
-early_stopping_batch = EarlyStoppingBatch(patience=30)
+early_stopping_batch = EarlyStoppingBatch(patience=40)
 
 class EarlyStoppingValLoss:
     def __init__(self, patience=30, threshold=.005):
@@ -264,7 +266,7 @@ class EarlyStoppingValLoss:
         # Stop if the loss hasn't improved for 'patience' consecutive epochs
         return plateau_count >= self.patience
 
-early_stopping_valloss = EarlyStoppingValLoss(patience=20)
+early_stopping_valloss = EarlyStoppingValLoss(patience=15)
 
 class EarlyStoppingAccuracy:
     def __init__(self, patience=30, threshold=.005):
@@ -321,13 +323,13 @@ class EarlyStoppingAccuracy:
         # Stop if the loss hasn't improved for 'patience' consecutive epochs
         return plateau_count >= self.patience
 
-early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
+early_stopping_accuracy = EarlyStoppingAccuracy(patience=10)
 
 # Move the model to the GPU device
 model.to(device)
 
 # Training function
-def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, num_epochs):
+def train_and_validate(model, dataloader, validation_loader, loss_func, optimizer, num_epochs):
     model.train()  # Set the model to training mode
 
     for epoch in range(num_epochs):
@@ -338,15 +340,20 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
             images = images.to(device)
             labels = labels.to(device)
 
+            # Clear gradients
             optimizer.zero_grad()
+
+            # Pass the input images through the CNN+Transformer
             outputs = model(images)
-            loss = criterion(outputs, labels)
+
+            # Get the output of the loss function
+            loss = loss_func(outputs, labels)
 
             # Compute gradients to be used by gradient descent in optimizer step
             loss.backward()
 
             # Clip gradients
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0) # previously, max_norm = 2
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=4) # previously, max_norm = 2
 
             # Optimization step
             optimizer.step()
@@ -419,8 +426,8 @@ def validate(model, dataloader):
             # Use the trained CNN+Transformer model for the image-set
             outputs = model(images)
 
-            # Compute the Loss function defined in criterion
-            loss = criterion(outputs, true_labels)
+            # Compute the Loss function defined in loss_func
+            loss = loss_func(outputs, true_labels)
 
             # Sum up the computed loss
             total_loss += loss.item()
@@ -478,11 +485,8 @@ def validate(model, dataloader):
 
     return validation_loss, accuracy
 
-# Move the model to the GPU device before training
-#model.to(device)
-
 # Train the CNN+Transformer
-train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, num_epochs)
+train_and_validate(model, train_dataloader, validation_dataloader, loss_func, optimizer, num_epochs)
 
 # Validate the CNN+Transformer
 validate(model, validation_dataloader)

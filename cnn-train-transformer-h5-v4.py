@@ -126,10 +126,23 @@ class EarlyStoppingAccuracy:
             self.history.pop(0) # Discard the earliest one
 
     def should_stop(self):
-        # Check if the minimum loss in the history is repeated or becomes smaller
+        """
+        Determine if training should be stopped based on validation loss.
+
+        Returns:
+        - Boolean, True if training should be stopped, False otherwise.
+        """
         if len(self.history) < self.patience:
-            return False  # Not enough data to decide
-        return self.history[-1] >= max(self.history[:-1]) - self.threshold
+            return False  # Not enough data to decide, continue training
+
+        # Check the best loss so far
+        max_accuracy = max(self.history[:-1])
+
+        # Count how many recent losses are within the threshold of the best loss
+        plateau_count = sum(1 for x in self.history[-self.patience:] if max_accuracy - self.threshold <= x <= max_accuracy + self.threshold)
+
+        # Stop if the loss hasn't improved for 'patience' consecutive epochs
+        return plateau_count >= self.patience
 
 learning_rate = 1e-4 # Larger values caused issues
 
@@ -307,6 +320,9 @@ for batch_size in batch_sizes:
             for num_heads in num_heads_options:
                 for embedding_dimension in embedding_dimensions:
 
+                    # Set a seed by hand to avoid unpredictable results
+                    torch.manual_seed(3908274565)
+
                     fc_out_dim = embedding_dimension
                     dense_dims = [fc_out_dim * 4, fc_out_dim * 2, fc_out_dim] # List of output dimensions for dense layers # The best by now
                     cnn_out_dim = 2 * dense_dims[0]
@@ -345,8 +361,8 @@ for batch_size in batch_sizes:
                     scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
 
                     # Re-instantiating the objects of early stopping
-                    early_stopping_batch = EarlyStoppingBatch(patience=60)
-                    early_stopping_valloss = EarlyStoppingValLoss(patience=25)
+                    early_stopping_batch = EarlyStoppingBatch(patience=30)
+                    early_stopping_valloss = EarlyStoppingValLoss(patience=20)
                     early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
 
                     # This snippet was proposed by Chat GPT-4 to avoid exiting on out-of-memory runtime error
