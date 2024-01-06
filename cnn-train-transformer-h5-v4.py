@@ -149,8 +149,6 @@ class EarlyStoppingAccuracy:
         # Stop if the loss hasn't improved for 'patience' consecutive epochs
         return plateau_count >= self.patience
 
-learning_rate = 1e-4 # Larger values caused issues
-
 # Training function
 def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, max_norm=2):
     model.train()  # Set the model to training mode
@@ -300,6 +298,7 @@ def validate(model, dataloader):
 """  **** Grid search loop ****  """
 
 # Define the grid for hyperparameters
+learning_rates = [1e-4, .5e-4, 1e-5]
 max_norms = [8, 4, 2]
 batch_sizes = [32, 16]
 transformer_layers_options = [1]
@@ -308,7 +307,8 @@ num_heads_options = [16, 8]
 embedding_dimensions = [128]
 weight_decays = [0.5e-4, 0.5e-5, 0.5e-6, 0.5e-6]
 
-print(f'\nMax norms for gradients clipping = {max_norms}')
+print(f'\nLearning rates = {learning_rates}')
+printf(f'Max norms for gradients clipping = {max_norms}')
 print(f'weight_decays = {weight_decays}')
 print(f'batch sizes = {batch_sizes}')
 print(f'transformer layers = {transformer_layers_options}')
@@ -319,91 +319,94 @@ print(f'embedding dimensions = {embedding_dimensions}\n')
 best_accuracy = 0  # Track the best accuracy
 best_hyperparameters = None  # Track the best hyperparameters
 
-for max_norm in max_norms:
-    for weight_decay in weight_decays:
+for learning_rate in learning_rates:
+    for max_norm in max_norms:
+        for weight_decay in weight_decays:
 
-        # Memory-affecting loops
-        for batch_size in batch_sizes:
+            # Memory-affecting loops
+            for batch_size in batch_sizes:
 
-            # Create data loaders
-            train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-            validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+                # Create data loaders
+                train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+                validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
-            for transformer_layers in transformer_layers_options:
-                for num_dense_layers in num_dense_layers_options:
-                    for num_heads in num_heads_options:
-                        for embedding_dimension in embedding_dimensions:
-                            # Clear all windows in visdom display
-                            vis.delete_env('Astro Classifier')
+                for transformer_layers in transformer_layers_options:
+                    for num_dense_layers in num_dense_layers_options:
+                        for num_heads in num_heads_options:
+                            for embedding_dimension in embedding_dimensions:
+                                # Clear all windows in visdom display
+                                vis.delete_env('Astro Classifier')
 
-                            # Set a seed by hand to avoid unpredictable results
-                            torch.manual_seed(3908274565)
+                                # Set a seed by hand to avoid unpredictable results
+                                torch.manual_seed(3908274565)
 
-                            fc_out_dim = embedding_dimension
-                            dense_dims = [fc_out_dim * 4, fc_out_dim * 2, fc_out_dim] # List of output dimensions for dense layers # The best by now
-                            cnn_out_dim = 2 * dense_dims[0]
-                            cnn_out_dims = [cnn_out_dim // 8, cnn_out_dim // 4, cnn_out_dim // 2, cnn_out_dim] # List of output dimensions for convolutional layers
+                                fc_out_dim = embedding_dimension
+                                dense_dims = [fc_out_dim * 4, fc_out_dim * 2, fc_out_dim] # List of output dimensions for dense layers # The best by now
+                                cnn_out_dim = 2 * dense_dims[0]
+                                cnn_out_dims = [cnn_out_dim // 8, cnn_out_dim // 4, cnn_out_dim // 2, cnn_out_dim] # List of output dimensions for convolutional layers
 
-                            print(f'\nConvolutional layers = {cnn_out_dims}')
-                            print(f'Full connected layers = {dense_dims}')
-                            print(f'Max norm for gradients clipping = {max_norm}')
-                            print(f'weight_decay = {weight_decay}')
-                            print(f'Batch size = {batch_size}')
-                            print(f'Transformer layers = {transformer_layers}')
-                            print(f'Num dense layers = {num_dense_layers}')
-                            print(f'Num heads = {num_heads}')
-                            print(f'Embedding dimension of the Encoder Attention = {embedding_dimension}\n')
+                                print(f'\nConvolutional layers = {cnn_out_dims}')
+                                print(f'Full connected layers = {dense_dims}')
+                                print(f'\nLearning rate = {learning_rate}')
+                                print(f'Max norm for gradients clipping = {max_norm}')
+                                print(f'weight_decay = {weight_decay}')
+                                print(f'Batch size = {batch_size}')
+                                print(f'Transformer layers = {transformer_layers}')
+                                print(f'Num dense layers = {num_dense_layers}')
+                                print(f'Num heads = {num_heads}')
+                                print(f'Embedding dimension of the Encoder Attention = {embedding_dimension}\n')
 
-                            # Instantiate the CNN + Dense layer + Transformer
-                            model = CNNTransformer(
-                                                CNN(cnn_out_dims, dense_dims),
-                                                num_heads=num_heads,
-                                                transformer_layers=transformer_layers,
-                                                num_dense_layers=num_dense_layers
-                                                )
+                                # Instantiate the CNN + Dense layer + Transformer
+                                model = CNNTransformer(
+                                                    CNN(cnn_out_dims, dense_dims),
+                                                    num_heads=num_heads,
+                                                    transformer_layers=transformer_layers,
+                                                    num_dense_layers=num_dense_layers
+                                                    )
 
-                            # Restart all the network weights:
-                            model.apply(init_weights)
+                                # Restart all the network weights:
+                                model.apply(init_weights)
 
-                            # Move the model to the GPU device
-                            model.to(device)
+                                # Move the model to the GPU device
+                                model.to(device)
 
-                            # Define the loss function and optimizer
-                            criterion = nn.CrossEntropyLoss(weight=class_weights)
-                            optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=.5e-6)
+                                # Define the loss function and optimizer
+                                criterion = nn.CrossEntropyLoss(weight=class_weights)
+                                optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=.5e-6)
 
-                            # Re-instantiating different schedulers to adjust the learning rate
-                            scheduler = lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.5, verbose=True)
-                            # More radical decrease in case of plateau detection
-                            scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, verbose=True)
-                            scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
+                                # Re-instantiating different schedulers to adjust the learning rate
+                                scheduler = lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.5, verbose=True)
+                                # More radical decrease in case of plateau detection
+                                scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, verbose=True)
+                                scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
 
-                            # Re-instantiating the objects of early stopping
-                            early_stopping_batch = EarlyStoppingBatch(patience=30)
-                            early_stopping_valloss = EarlyStoppingValLoss(patience=20)
-                            early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
+                                # Re-instantiating the objects of early stopping
+                                early_stopping_batch = EarlyStoppingBatch(patience=30)
+                                early_stopping_valloss = EarlyStoppingValLoss(patience=20)
+                                early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
 
-                            # This snippet was proposed by Chat GPT-4 to avoid exiting on out-of-memory runtime error
-                            try:
-                                train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, max_norm)
-                            except RuntimeError as e:
-                                if 'out of memory' in str(e):
-                                    print("WARNING: Out of memory. Skipping grid element")
-                                    # Handle the out-of-memory issue here, e.g., by reducing batch size or skipping
-                                    continue
-                                else:
-                                    raise e  # Re-raise the exception if it's not a memory error
+                                # This snippet was proposed by Chat GPT-4 to avoid exiting on out-of-memory runtime error
+                                try:
+                                    train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, max_norm)
+                                except RuntimeError as e:
+                                    if 'out of memory' in str(e):
+                                        print("WARNING: Out of memory. Skipping grid element")
+                                        # Handle the out-of-memory issue here, e.g., by reducing batch size or skipping
+                                        continue
+                                    else:
+                                        raise e  # Re-raise the exception if it's not a memory error
 
-                            # Evaluate the model and update best_hyperparameters if it's the best one yet
-                            _, current_accuracy = validate(model, validation_dataloader)
-                            if current_accuracy > best_accuracy:
-                                best_accuracy = current_accuracy
-                                best_hyperparameters = (batch_size, transformer_layers, num_dense_layers, num_heads, embedding_dimension)
+                                # Evaluate the model and update best_hyperparameters if it's the best one yet
+                                _, current_accuracy = validate(model, validation_dataloader)
+                                if current_accuracy > best_accuracy:
+                                    best_accuracy = current_accuracy
+                                    best_hyperparameters = (batch_size, transformer_layers, num_dense_layers, num_heads, embedding_dimension)
 
 # Grid loop ends down here
 
 # Print out the best hyperparameter set and its performance
 print("\nBest Hyperparameters:")
+print(f'Learning rate = {learning_rate}')
 print(f'Max norm for gradients clipping = {max_norm}')
 print(f'weight_decay = {weight_decay}')
 print(f"Batch Size={best_hyperparameters[0]}")
