@@ -36,10 +36,10 @@ vis = visdom.Visdom()
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
-galaxies = np.float32(1/1582)
-globular = np.float32(1/498)
-nebulae  = np.float32(1/734)
-openclust= np.float32(1/450)
+galaxies = np.float32(1/197)
+globular = np.float32(1/104)
+nebulae  = np.float32(1/171)
+openclust= np.float32(1/104)
 # # run this before to have an actual class histogram
 # galaxies = np.float32(1)
 # globular = np.float32(1)
@@ -298,14 +298,14 @@ def validate(model, dataloader):
 '''  **** Grid search loop ****  '''
 
 # Define the grid for hyperparameters
-learning_rates = [1e-4, .5e-4, .25e-4]
-max_norms = [8, 4, 2]
-batch_sizes = [32, 16]
+learning_rates = [.5e-4, .25e-4, .125e-4]
+max_norms = [4, 2]
+batch_sizes = [16]
 transformer_layers_options = [1]
-num_dense_layers_options = [2, 0]
+num_dense_layers_options = [0]
 num_heads_options = [16, 8]
 embedding_dimensions = [128]
-weight_decays = [0.5e-4, 0.5e-5, 0.5e-6]
+weight_decays = [0.5e-6, 0.5e-7]
 
 print(f'\nLearning rates = {learning_rates}')
 print(f'Max norms for gradients clipping = {max_norms}')
@@ -376,15 +376,15 @@ for learning_rate in learning_rates:
                                 optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=.5e-6)
 
                                 # Re-instantiating different schedulers to adjust the learning rate
-                                scheduler = lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.5, verbose=True)
+                                scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5, verbose=True)
                                 # More radical decrease in case of plateau detection
                                 scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, verbose=True)
                                 scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
 
                                 # Re-instantiating the objects of early stopping
-                                early_stopping_batch = EarlyStoppingBatch(patience=30)
-                                early_stopping_valloss = EarlyStoppingValLoss(patience=20)
-                                early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
+                                early_stopping_batch = EarlyStoppingBatch(patience=40)
+                                early_stopping_valloss = EarlyStoppingValLoss(patience=15)
+                                early_stopping_accuracy = EarlyStoppingAccuracy(patience=10)
 
                                 # This snippet was proposed by Chat GPT-4 to avoid exiting on out-of-memory runtime error
                                 try:
@@ -415,4 +415,4 @@ print(f'Transformer Layers={best_hyperparameters[1]}')
 print(f'Dense Layers={best_hyperparameters[2]}')
 print(f'Heads={best_hyperparameters[3]}')
 print(f'Embedding dimension={best_hyperparameters[4]}\n')
-print(f'\nYielded Best Accuracy: {best_accuracy}')
+print(f'\nBest Accuracy: {best_accuracy}')

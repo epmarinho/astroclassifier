@@ -38,10 +38,10 @@ viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
-galaxies = np.float32(1/189)
-globular = np.float32(1/109)
-nebulae  = np.float32(1/190)
-openclust= np.float32(1/124)
+galaxies = np.float32(1/197)
+globular = np.float32(1/104)
+nebulae  = np.float32(1/171)
+openclust= np.float32(1/104)
 ## run this before to have an actual class histogram (should be?)
 #galaxies = np.float32(1)
 #globular = np.float32(1)
@@ -62,16 +62,16 @@ class_weights = class_weights.to(device)
 
 num_epochs = 1000
 
-initial_learning_rate = 1e-4 # Larger values don't work
+initial_learning_rate = 2.5e-5 # Larger values don't work
 
 # Define the loss function and optimizer
 loss_func = nn.CrossEntropyLoss(weight=class_weights)
-optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=.5e-6)
+optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=.5e-7)
 
 # Define a scheduler to adjust the learning rate for each peculiarity
 scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5, verbose=True)
-scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5, verbose=True)
-scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True)
+scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, verbose=True)
+scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
 
 # Check if the pretrained file exists
 model_checkpoint = "trained_cnn_model.pth"
@@ -221,8 +221,6 @@ class EarlyStoppingBatch:
         # Stop if the most recent loss is not significantly lower than the best previous loss
         return self.history[-1] <= min(self.history[:-1]) + self.threshold
 
-early_stopping_batch = EarlyStoppingBatch(patience=40)
-
 class EarlyStoppingValLoss:
     def __init__(self, patience=30, threshold=.005):
         """
@@ -266,7 +264,7 @@ class EarlyStoppingValLoss:
         # Stop if the loss hasn't improved for 'patience' consecutive epochs
         return plateau_count >= self.patience
 
-early_stopping_valloss = EarlyStoppingValLoss(patience=15)
+
 
 class EarlyStoppingAccuracy:
     def __init__(self, patience=30, threshold=.005):
@@ -323,13 +321,15 @@ class EarlyStoppingAccuracy:
         # Stop if the loss hasn't improved for 'patience' consecutive epochs
         return plateau_count >= self.patience
 
+early_stopping_batch = EarlyStoppingBatch(patience=40)
+early_stopping_valloss = EarlyStoppingValLoss(patience=15)
 early_stopping_accuracy = EarlyStoppingAccuracy(patience=10)
 
 # Move the model to the GPU device
 model.to(device)
 
 # Training function
-def train_and_validate(model, dataloader, validation_loader, loss_func, optimizer, num_epochs):
+def train_and_validate(model, dataloader, validation_loader, loss_func, optimizer):
     model.train()  # Set the model to training mode
 
     for epoch in range(num_epochs):
@@ -353,7 +353,7 @@ def train_and_validate(model, dataloader, validation_loader, loss_func, optimize
             loss.backward()
 
             # Clip gradients
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm=4) # previously, max_norm = 2
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=2) # previously, max_norm = 2
 
             # Optimization step
             optimizer.step()
@@ -486,7 +486,7 @@ def validate(model, dataloader):
     return validation_loss, accuracy
 
 # Train the CNN+Transformer
-train_and_validate(model, train_dataloader, validation_dataloader, loss_func, optimizer, num_epochs)
+train_and_validate(model, train_dataloader, validation_dataloader, loss_func, optimizer)
 
 # Validate the CNN+Transformer
 validate(model, validation_dataloader)
