@@ -80,7 +80,7 @@ class CNNTransformer(nn.Module):
                 dropout=encoder_dropout
             ),
             num_layers=transformer_layers,
-            enable_nested_tensor=True,
+            enable_nested_tensor=False, # As suggested by GPT-4
         )
 
         # Adding dense layers for classification after the CNN Transformer
