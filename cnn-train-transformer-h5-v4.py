@@ -1,4 +1,4 @@
-""" Code name: cnn-train-transformer-h5-v3.py (main code for training)"""
+''' Code name: cnn-train-transformer-h5-v3.py (main code for training)'''
 
 # Author: Eraldo Pereira Marinho, Ph.D
 # About: The code imports cnn_transformer_core to allow Transformer+CNN to classify astronomical images
@@ -28,8 +28,8 @@ import numpy as np
 import pillow_avif
 from sklearn.metrics import confusion_matrix
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"PyTorch device: {device}")
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f'PyTorch device: {device}')
 
 viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 vis = visdom.Visdom()
@@ -53,7 +53,7 @@ weight_class_3=openclust/norm_denominator
 
 # Instantiate the class weight tensor
 class_weights = torch.tensor([weight_class_0, weight_class_1, weight_class_2, weight_class_3])
-print(f"Class weights = {class_weights}")
+print(f'Class weights = {class_weights}')
 
 # Weights tensor must be converted to the adopted device
 class_weights = class_weights.to(device)
@@ -131,12 +131,12 @@ class EarlyStoppingAccuracy:
             self.history.pop(0) # Discard the earliest one
 
     def should_stop(self):
-        """
+        '''
         Determine if training should be stopped based on validation loss.
 
         Returns:
         - Boolean, True if training should be stopped, False otherwise.
-        """
+        '''
         if len(self.history) < self.patience:
             return False  # Not enough data to decide, continue training
 
@@ -182,7 +182,7 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
 
         early_stopping_batch.update_history(epoch_loss)
         if early_stopping_batch.should_stop():
-            print(f"\nEarly stopping triggered at epoch {epoch + 1} for batch loss = {epoch_loss}\n")
+            print(f'\nEarly stopping triggered at epoch {epoch + 1} for batch loss = {epoch_loss}\n')
             break
 
         validation_loss, accuracy = validate(model, validation_loader)
@@ -190,13 +190,13 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
         scheduler_by_valloss.step(validation_loss)
         early_stopping_valloss.update_history(validation_loss)
         if early_stopping_valloss.should_stop():
-            print(f"\nEarly stopping triggered at epoch {epoch + 1} for validation loss = {validation_loss}\n")
+            print(f'\nEarly stopping triggered at epoch {epoch + 1} for validation loss = {validation_loss}\n')
             break
 
         scheduler_by_accuracy.step(accuracy)
         early_stopping_accuracy.update_history(accuracy)
         if early_stopping_accuracy.should_stop():
-            print(f"\nEarly stopping triggered at epoch {epoch + 1} for validation accuracy = {accuracy:.2f}%\n")
+            print(f'\nEarly stopping triggered at epoch {epoch + 1} for validation accuracy = {accuracy:.2f}%\n')
             break
 
 # The predicted_labels array is used to construct a histogram to reveal how many times each class was predicted during evaluation
@@ -257,7 +257,7 @@ def validate(model, dataloader):
     #early_stopping_batch.update_history(validation_loss)
     #if early_stopping_batch.should_stop():
     ## if early_stopping_batch.early_stop:
-        #print(f"\nEarly stopping triggered for validation loss = {validation_loss}\n")
+        #print(f'\nEarly stopping triggered for validation loss = {validation_loss}\n')
         #break
 
     accuracy = 100 * correct / total
@@ -295,20 +295,20 @@ def validate(model, dataloader):
     return validation_loss, accuracy
 
 
-"""  **** Grid search loop ****  """
+'''  **** Grid search loop ****  '''
 
 # Define the grid for hyperparameters
-learning_rates = [1e-4, .5e-4, 1e-5]
+learning_rates = [1e-4, .5e-4, .25e-4]
 max_norms = [8, 4, 2]
 batch_sizes = [32, 16]
 transformer_layers_options = [1]
 num_dense_layers_options = [2, 0]
 num_heads_options = [16, 8]
 embedding_dimensions = [128]
-weight_decays = [0.5e-4, 0.5e-5, 0.5e-6, 0.5e-6]
+weight_decays = [0.5e-4, 0.5e-5, 0.5e-6]
 
 print(f'\nLearning rates = {learning_rates}')
-printf(f'Max norms for gradients clipping = {max_norms}')
+print(f'Max norms for gradients clipping = {max_norms}')
 print(f'weight_decays = {weight_decays}')
 print(f'batch sizes = {batch_sizes}')
 print(f'transformer layers = {transformer_layers_options}')
@@ -319,23 +319,24 @@ print(f'embedding dimensions = {embedding_dimensions}\n')
 best_accuracy = 0  # Track the best accuracy
 best_hyperparameters = None  # Track the best hyperparameters
 
+''' Here it is defined the training grid for the parameter sets above '''
+
+# Memory-free loops
 for learning_rate in learning_rates:
     for max_norm in max_norms:
         for weight_decay in weight_decays:
-
-            # Memory-affecting loops
+            # Memory-impact loops
             for batch_size in batch_sizes:
-
                 # Create data loaders
                 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
                 validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
-
                 for transformer_layers in transformer_layers_options:
                     for num_dense_layers in num_dense_layers_options:
                         for num_heads in num_heads_options:
                             for embedding_dimension in embedding_dimensions:
                                 # Clear all windows in visdom display
                                 vis.delete_env('Astro Classifier')
+                                vis.close()
 
                                 # Set a seed by hand to avoid unpredictable results
                                 torch.manual_seed(3908274565)
@@ -354,7 +355,7 @@ for learning_rate in learning_rates:
                                 print(f'Transformer layers = {transformer_layers}')
                                 print(f'Num dense layers = {num_dense_layers}')
                                 print(f'Num heads = {num_heads}')
-                                print(f'Embedding dimension of the Encoder Attention = {embedding_dimension}\n')
+                                print(f'Encoder-Attention embedding dimension = {embedding_dimension}\n')
 
                                 # Instantiate the CNN + Dense layer + Transformer
                                 model = CNNTransformer(
@@ -390,7 +391,7 @@ for learning_rate in learning_rates:
                                     train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, max_norm)
                                 except RuntimeError as e:
                                     if 'out of memory' in str(e):
-                                        print("WARNING: Out of memory. Skipping grid element")
+                                        print('WARNING: Out of memory. Skipping grid element')
                                         # Handle the out-of-memory issue here, e.g., by reducing batch size or skipping
                                         continue
                                     else:
@@ -405,13 +406,13 @@ for learning_rate in learning_rates:
 # Grid loop ends down here
 
 # Print out the best hyperparameter set and its performance
-print("\nBest Hyperparameters:")
+print('\nBest Hyperparameters:')
 print(f'Learning rate = {learning_rate}')
 print(f'Max norm for gradients clipping = {max_norm}')
 print(f'weight_decay = {weight_decay}')
-print(f"Batch Size={best_hyperparameters[0]}")
-print(f"Transformer Layers={best_hyperparameters[1]}")
-print(f"Dense Layers={best_hyperparameters[2]}")
-print(f"Heads={best_hyperparameters[3]}")
-print(f"Embedding dimension={best_hyperparameters[4]}\n")
-print(f"\nYielded Best Accuracy: {best_accuracy}")
+print(f'Batch Size={best_hyperparameters[0]}')
+print(f'Transformer Layers={best_hyperparameters[1]}')
+print(f'Dense Layers={best_hyperparameters[2]}')
+print(f'Heads={best_hyperparameters[3]}')
+print(f'Embedding dimension={best_hyperparameters[4]}\n')
+print(f'\nYielded Best Accuracy: {best_accuracy}')
