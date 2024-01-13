@@ -142,7 +142,7 @@ class CNN(nn.Module):
 
             conv_layer = nn.Sequential(
                 nn.Conv2d(in_channels, out_dim, kernel_size=3, stride=1, padding=1),
-                nn.BatchNorm2d(out_dim),
+                nn.BatchNorm2d(out_dim), # Batch normalization relies on the statistics of the batch, and with smaller batches, these statistics might not be a good estimate of the population statistics.
                 nn.PReLU(), # PReLU worked better than both ReLU and GELU
                 nn.MaxPool2d(kernel_size=2, stride=2)
             )
@@ -171,7 +171,7 @@ class CNN(nn.Module):
         self.embedding_layer = nn.Sequential(
             nn.Linear(in_dim, embedding_dimension),
             # nn.Dropout(p=dropout), # Dropout for FC output didn't work
-            nn.GELU() # Some improvement using GELU
+            nn.GELU() # Some improvement using GELU as activation for CNN output
         )
 
     def forward(self, x):
@@ -189,7 +189,7 @@ class CNN(nn.Module):
         for dense_layer in self.dense_layers:
             x = dense_layer(x)
 
-        # Embedding layer
+        # Passing the input 'x' through the embedding layer before sending it to the Transformer Encoder
         x = self.embedding_layer(x)
 
         return x
