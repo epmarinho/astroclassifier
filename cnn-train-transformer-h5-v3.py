@@ -22,7 +22,10 @@ import numpy as np
 import pillow_avif
 
 # Set a seed by hand to avoid unpredictable results
-torch.manual_seed(3908274565)
+torch.manual_seed(3908274)
+
+# Trying to minimize the randomness problem - maybe not enough
+torch.backends.cudnn.deterministic = True
 
 from cnn_transformer_core_h5_v3 import model
 from cnn_transformer_core_h5_v3 import train_dataloader
@@ -38,10 +41,10 @@ viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
-galaxies = np.float32(1/197)
-globular = np.float32(1/104)
-nebulae  = np.float32(1/171)
-openclust= np.float32(1/104)
+galaxies = np.float32(1/226)
+globular = np.float32(1/109)
+nebulae  = np.float32(1/200)
+openclust= np.float32(1/117)
 ## run this before to have an actual class histogram (should be?)
 #galaxies = np.float32(1)
 #globular = np.float32(1)
@@ -58,18 +61,27 @@ print(f"\nClass weights = {class_weights}\n")
 # Weights tensor must be converted to the set device
 class_weights = class_weights.to(device)
 
+def init_weights(m):
+    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+        # Initialize weights using Xavier uniform initialization
+        init.xavier_uniform_(m.weight)
+
+        # Set biases to zero if they exist
+        if m.bias is not None:
+            init.constant_(m.bias, 0)
+
 # Training parameters
 
-num_epochs = 1000
+num_epochs = 100
 
-initial_learning_rate = 2.5e-5 # Larger values don't work
+initial_learning_rate = 1e-4
 
 # Define the loss function and optimizer
 loss_func = nn.CrossEntropyLoss(weight=class_weights)
-optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=.5e-7)
+optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=5e-7)
 
 # Define a scheduler to adjust the learning rate for each peculiarity
-scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5, verbose=True)
+scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5, verbose=False)
 scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, verbose=True)
 scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
 
@@ -79,9 +91,9 @@ if os.path.exists(model_checkpoint):
     # Load pretrained weights
     checkpoint = torch.load(model_checkpoint)
     model.load_state_dict(checkpoint)
-    print(f"Pretrained weights \"{model_checkpoint}\" found.")
+    print(f"\nPretrained weights \"{model_checkpoint}\" found.\n")
 else:
-    print("No pretrained weights file found. Initializing with PyTorch default weights.")
+    print("\nNo pretrained weights file found. Initializing with PyTorch default weights.\n")
 #     # He initialization in PyTorch
 #     # Access all the linear layers (fully connected)
 #     # Ensure the model contains only layers that should be initialized with He
@@ -321,9 +333,12 @@ class EarlyStoppingAccuracy:
         # Stop if the loss hasn't improved for 'patience' consecutive epochs
         return plateau_count >= self.patience
 
-early_stopping_batch = EarlyStoppingBatch(patience=40)
-early_stopping_valloss = EarlyStoppingValLoss(patience=15)
-early_stopping_accuracy = EarlyStoppingAccuracy(patience=10)
+early_stopping_batch = EarlyStoppingBatch(patience=20)
+early_stopping_valloss = EarlyStoppingValLoss(patience=20)
+early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
+
+# Restart all the network weights:
+model.apply(init_weights)
 
 # Move the model to the GPU device
 model.to(device)
@@ -334,7 +349,6 @@ def train_and_validate(model, dataloader, validation_loader, loss_func, optimize
 
     for epoch in range(num_epochs):
         running_loss = 0.0
-
         for images, labels in dataloader:
             # Move the images and labels to the GPU device
             images = images.to(device)
@@ -353,7 +367,7 @@ def train_and_validate(model, dataloader, validation_loader, loss_func, optimize
             loss.backward()
 
             # Clip gradients
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm=2) # previously, max_norm = 2
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=2)
 
             # Optimization step
             optimizer.step()
@@ -459,29 +473,35 @@ def validate(model, dataloader):
     precision = []
     recall = []
     f1_scores = []
+    specificity = []
 
     for i in range(len(cm)):
         true_positive = cm[i, i]
         false_positive = sum(cm[j, i] for j in range(len(cm))) - true_positive
         false_negative = sum(cm[i, j] for j in range(len(cm))) - true_positive
+        true_negative = sum(cm[j, k] for j in range(len(cm)) for k in range(len(cm))) - (true_positive + false_positive + false_negative)
 
-        precision_i = true_positive / (true_positive + false_positive + 1e-8)
-        recall_i = true_positive / (true_positive + false_negative + 1e-8)
-        f1_i = 2 * (precision_i * recall_i) / (precision_i + recall_i + 1e-8)
+        precision_i = true_positive / (true_positive + false_positive + 1e-12)
+        recall_i = true_positive / (true_positive + false_negative + 1e-12)
+        f1_i = 2 * (precision_i * recall_i) / (precision_i + recall_i + 1e-12)
+        specificity_i = true_negative / (true_negative + false_positive + 1e-12)
 
         precision.append(precision_i)
         recall.append(recall_i)
         f1_scores.append(f1_i)
+        specificity.append(specificity_i)
 
     print(f'Validation Loss: {validation_loss:.6f}, Validation Accuracy: {accuracy:.2f}%')
     print(f'Precision per class: {precision}')
     print(f'Recall per class: {recall}')
     print(f'F1-score per class: {f1_scores}')
+    print(f'Specificity per class: {specificity}')
     viz.plot_lines('Validation Loss', validation_loss)
     viz.plot_lines('Validation Accuracy', accuracy)
     viz.plot_lines('Precision', precision)
     viz.plot_lines('Recall', recall)
     viz.plot_lines('F1-scores', f1_scores)
+    viz.plot_lines('Specificity-scores', specificity)
 
     return validation_loss, accuracy
 

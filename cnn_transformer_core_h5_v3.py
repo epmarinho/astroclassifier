@@ -16,6 +16,7 @@ import h5py
 import torch.nn.init as init
 import os
 
+# Swish unused yet
 class Swish(nn.Module):
     def __init__(self, beta=1.0):
         super(Swish, self).__init__()
@@ -64,10 +65,10 @@ class CNNTransformer(nn.Module):
     def __init__(self,
                  cnn_model,
                  num_heads = 16,
-                 transformer_layers = 6, # Number of Transformer Encoder attention layers
+                 transformer_layers = 4, # Number of Transformer Encoder attention layers
                  num_dense_layers = 3,
                  embedding_dimension = 128,
-                 encoder_dropout = .1,
+                 encoder_dropout = .01,
         ):
         super(CNNTransformer, self).__init__()
         self.cnn_model = cnn_model
@@ -201,7 +202,7 @@ class CNN(nn.Module):
 batch_size = 16
 
 # Create data loaders
-train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False) # Carefully check adopting shuffle=False
 validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
 # Gets the number of classes from the dataset
@@ -226,6 +227,6 @@ print(f'Convolutional layers = {cnn_out_dims}')
 print(f'Full connected laysers = {dense_dims}\n')
 
 # Instantiate the CNN + Dense layer + Transformer
-cnn_model = CNN(cnn_out_dims, dense_dims, embedding_dimension)
-# The best for unsorted astronomical image classification
-model = CNNTransformer(cnn_model, num_heads=16, transformer_layers=1, num_dense_layers=0, embedding_dimension=embedding_dimension)
+cnn_model = CNN(cnn_out_dims, dense_dims, embedding_dimension, dropout=0.5)
+# Instantiate the composed CNN+Transformer network
+model = CNNTransformer(cnn_model, num_heads=8, transformer_layers=1, num_dense_layers=2, embedding_dimension=embedding_dimension)
