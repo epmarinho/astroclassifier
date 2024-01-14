@@ -264,7 +264,7 @@ def validate(model, dataloader):
 
     cm = confusion_matrix(all_true, all_predicted)
 
-    # Compute precision, recall and F1-score for each class
+    # Compute precision, recall, specificity and F1-score for each class
     precision = []
     recall = []
     f1_scores = []
