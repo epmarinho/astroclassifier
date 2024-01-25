@@ -3,6 +3,14 @@
 # Author: Eraldo Pereira Marinho, Ph.D
 # About: The code imports cnn_transformer_core to allow Transformer+CNN to classify astronomical images
 # Creation: Jul 12, 2023
+# Major changes: Jan 23, 2024
+
+DeterministicTraining = False
+if not DeterministicTraining:
+    print('Non d', end='')
+else:
+    print('D', end='')
+print('eterministic training.\n')
 
 import torch
 import torch.nn as nn
@@ -20,19 +28,15 @@ import torch.nn.init as init
 import numpy as np
 # from PIL import Image
 import pillow_avif
+import h5py
 
-# Set a seed by hand to avoid unpredictable results
-torch.manual_seed(3908274)
-
-# Trying to minimize the randomness problem - maybe not enough
-torch.backends.cudnn.deterministic = True
-
-from cnn_transformer_core_h5_v3 import model
-from cnn_transformer_core_h5_v3 import train_dataloader
-from cnn_transformer_core_h5_v3 import validation_dataloader
+#from cnn_transformer_core_h5_v3 import model
+#from cnn_transformer_core_h5_v3 import train_dataloader
+#from cnn_transformer_core_h5_v3 import validation_dataloader
 # from cnn_transformer_core_h5_v3 import learning_rate
 # from cnn_transformer_core_h5_v3 import num_epochs
 # from cnn_transformer_core_h5_v3 import Swish
+from cnn_transformer_core_h5_v3 import CNN, CNNTransformer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"PyTorch device: {device}")
@@ -70,11 +74,95 @@ def init_weights(m):
         if m.bias is not None:
             init.constant_(m.bias, 0)
 
+
+# Swish unused yet
+class Swish(nn.Module):
+    def __init__(self, beta=1.0):
+        super(Swish, self).__init__()
+        self.beta = beta
+
+    def forward(self, x):
+        return x * torch.sigmoid(self.beta * x)
+
+# Define how to load class labels from the H5 file
+def load_class_labels_from_h5(h5file_path, dataset_name):
+    with h5py.File(h5file_path, "r") as h5file:
+        class_labels = h5file.attrs[f"{dataset_name}_class_labels"]
+    return class_labels
+
+# Load class labels from the H5 file
+class_labels = load_class_labels_from_h5("datasets.h5", "train")
+
+# Function to load data and labels from H5 file
+def load_data_from_h5(h5file_path, dataset_name):
+    with h5py.File(h5file_path, "r") as h5file:
+        data = h5file[f"{dataset_name}_data"][:]
+        labels = h5file[f"{dataset_name}_labels"][:]
+    return data, labels
+
+# Load training data and labels from H5 file
+train_data, train_labels = load_data_from_h5("datasets.h5", "train")
+
+# Load validation data and labels from H5 file
+validation_data, validation_labels = load_data_from_h5("datasets.h5", "validation")
+
+# Create PyTorch tensors from the loaded NumPy arrays
+train_data = torch.tensor(train_data)
+train_labels = torch.tensor(train_labels)
+validation_data = torch.tensor(validation_data)
+validation_labels = torch.tensor(validation_labels)
+
+# Create custom PyTorch datasets
+train_dataset = torch.utils.data.TensorDataset(train_data, train_labels)
+validation_dataset = torch.utils.data.TensorDataset(validation_data, validation_labels)
+
+# Setup the mini-batch size
+batch_size = 16
+
+# Setup deterministic mode if required
+if DeterministicTraining: torch.manual_seed(3908274)
+
+# Trying to minimize the randomness problem - maybe not enough
+torch.backends.cudnn.deterministic = DeterministicTraining
+
+# Create data loaders
+train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=DeterministicTraining) # Carefully check adopting shuffle=False
+
+validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+
+# Transformer Encoder Parameters
+#embedding_dimension = 128 # Dimension of the feature space, which is an important dimension for encoder attention
+embedding_dimension = 128
+
+# Full connected layers
+# dense_dims = [1024, 512, 256] # List of output dimensions for dense layers # The best for unsorted astronomical image classification
+fc_out_dim = embedding_dimension
+dense_dims = [fc_out_dim * 4, fc_out_dim * 2, fc_out_dim] # List of output dimensions for dense layers # The best for unsorted astronomical image classification
+
+# Convolutional layers
+cnn_out_dim = 2 * dense_dims[0]
+cnn_out_dims = [cnn_out_dim // 8, cnn_out_dim // 4, cnn_out_dim // 2, cnn_out_dim] # List of output dimensions for convolutional layers
+# cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers # The best for unsorted astronomical image classification
+
+print(f'\nEncoder attention embedding dimension = {embedding_dimension}')
+print(f'Convolutional layers = {cnn_out_dims}')
+print(f'Full connected laysers = {dense_dims}\n')
+
+# Gets the number of classes from the dataset
+num_classes = len(class_labels) # use num_classes as argument of CNN() and CNNTransformer() if different from default num_classes=4
+print(f'Preset number of classes = {num_classes}')
+
+# Instantiate the CNN + Dense layer + Transformer
+cnn_model = CNN(cnn_out_dims, dense_dims, embedding_dimension, dropout=0.4, num_classes=num_classes)
+
+# Instantiate the composed CNN+Transformer network
+model = CNNTransformer(cnn_model, num_heads=4, transformer_layers=1, num_dense_layers=0, embedding_dimension=embedding_dimension, num_classes=num_classes)
+
 # Training parameters
 
 num_epochs = 100
 
-initial_learning_rate = 1e-4
+initial_learning_rate = 1.4e-4
 
 # Define the loss function and optimizer
 loss_func = nn.CrossEntropyLoss(weight=class_weights)
@@ -91,7 +179,7 @@ if os.path.exists(model_checkpoint):
     # Load pretrained weights
     checkpoint = torch.load(model_checkpoint)
     model.load_state_dict(checkpoint)
-    print(f"\nPretrained weights \"{model_checkpoint}\" found.\n")
+    print(f"\nPretrained weights \"{model_checkpoint}\" loaded.\n")
 else:
     print("\nNo pretrained weights file found. Initializing with PyTorch default weights.\n")
 #     # He initialization in PyTorch
@@ -103,99 +191,6 @@ else:
 
 # # Check the loaded weights
 # print(model.state_dict())
-
-# This is basically my earling stopping proposed in previously unpublished works
-#class EarlyStoppingBatch:
-    #def __init__(self, remembrance, patience,  threshold=.005):
-        #self.remembrance = remembrance
-        #self.history = []
-        #self.patience = patience
-        ##self.patience = patience if patience <= remembrance else remembrance
-        #self.threshold = threshold
-
-    #def update_history(self, new_loss):
-        ## Update the history array with the new loss value
-        #self.history.append(new_loss)
-        ## Keep only the most recent 'remembrance' elements
-        #if len(self.history) > self.remembrance:
-            #self.history.pop(0) # Discard the earliest one
-
-    #def should_stop(self):
-        ## Check if the minimum loss in the history is repeated or becomes smaller
-        ## if len(self.history) < self.remembrance:
-        #if len(self.history) < self.patience and self.remembrance >= self.patience:
-            #return False  # Not enough data to decide
-        #if len(self.history) < self.remembrance and self.remembrance < self.patience:
-            #return False
-        #return self.history[-1] <= min(self.history[:-1]) + self.threshold
-
-#early_stopping_batch = EarlyStoppingBatch(remembrance=20, patience=30)
-
-#class EarlyStoppingValLoss:
-    #def __init__(self, remembrance, patience,  threshold=.005):
-        #self.remembrance = remembrance
-        #self.history = []
-        #self.patience = patience
-        ##self.patience = patience if patience <= remembrance else remembrance
-        #self.threshold = threshold
-
-    #def update_history(self, new_loss):
-        ## Update the history array with the new loss value
-        #self.history.append(new_loss)
-        ## Keep only the most recent 'remembrance' elements
-        #if len(self.history) > self.remembrance:
-            #self.history.pop(0) # Discard the earliest one
-
-    ##def should_stop(self):
-        ### Check if the minimum loss in the history is repeated or becomes smaller
-        ### if len(self.history) < self.remembrance:
-        ##if len(self.history) < self.patience:
-            ##return False  # Not enough data to decide
-        ##return min(self.history[:-1]) - self.threshold <= self.history[-1] <= min(self.history[:-1]) + self.threshold
-
-    #def should_stop(self):
-        ## Check if we have enough data to make a decision
-        #if len(self.history) < self.patience and self.remembrance >= self.patience:
-            #return False  # Not enough data to decide
-        #if len(self.history) < self.remembrance and self.remembrance < self.patience:
-            #return False
-
-        ## Check the best loss so far
-        #max_accuracy = min(self.history[:-1])
-
-        ## Check if the loss has not improved significantly for 'patience' epochs
-        #plateau_count = sum(1 for x in self.history[-self.patience:] if max_accuracy - self.threshold <= x <= max_accuracy + self.threshold)
-
-        ## If the loss has been on a plateau for 'patience' consecutive epochs, stop
-        #return plateau_count >= self.patience
-
-#early_stopping_valloss = EarlyStoppingValLoss(remembrance=20, patience=25)
-
-#class EarlyStoppingAccuracy:
-    #def __init__(self, remembrance, patience,  threshold=.0005):
-        #self.remembrance = remembrance
-        #self.history = []
-        #self.patience = patience
-        ##self.patience = patience if patience <= remembrance else remembrance
-        #self.threshold = threshold
-
-    #def update_history(self, new_accuracy):
-        ## Update the history array with the new loss value
-        #self.history.append(new_accuracy)
-        ## Keep only the most recent 'remembrance' elements
-        #if len(self.history) > self.remembrance:
-            #self.history.pop(0) # Discard the earliest one
-
-    #def should_stop(self):
-        ## Check if the minimum loss in the history is repeated or becomes smaller
-        ## if len(self.history) < self.remembrance:
-        #if len(self.history) < self.patience and self.remembrance >= self.patience:
-            #return False  # Not enough data to decide
-        #if len(self.history) < self.remembrance and self.remembrance < self.patience:
-            #return False
-        #return self.history[-1] >= max(self.history[:-1]) - self.threshold
-
-#early_stopping_accuracy = EarlyStoppingAccuracy(remembrance=20, patience=20)
 
 class EarlyStoppingBatch:
     def __init__(self, patience=30, threshold=.005):
@@ -276,8 +271,6 @@ class EarlyStoppingValLoss:
         # Stop if the loss hasn't improved for 'patience' consecutive epochs
         return plateau_count >= self.patience
 
-
-
 class EarlyStoppingAccuracy:
     def __init__(self, patience=30, threshold=.005):
         """
@@ -333,9 +326,9 @@ class EarlyStoppingAccuracy:
         # Stop if the loss hasn't improved for 'patience' consecutive epochs
         return plateau_count >= self.patience
 
-early_stopping_batch = EarlyStoppingBatch(patience=20)
-early_stopping_valloss = EarlyStoppingValLoss(patience=20)
-early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
+early_stopping_batch = EarlyStoppingBatch(patience=40)
+early_stopping_valloss = EarlyStoppingValLoss(patience=10)
+early_stopping_accuracy = EarlyStoppingAccuracy(patience=5)
 
 # Restart all the network weights:
 model.apply(init_weights)
