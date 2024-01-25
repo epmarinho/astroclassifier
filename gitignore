@@ -162,3 +162,4 @@ cython_debug/
 # Do not upload the trained weights
 ./trained_cnn_model.pth
 trained_cnn_model.pth
+datasets.h5
