@@ -286,7 +286,7 @@ def validate(model, dataloader):
         f1_scores.append(f1_i)
         specificity.append(specificity_i)
 
-    print(f'Validation Loss: {validation_loss:.6f}, Validation Accuracy: {accuracy:.2f}%')
+    #print(f'Validation Loss: {validation_loss:.6f}, Validation Accuracy: {accuracy:.2f}%')
     #print(f'Precision per class: {precision}')
     #print(f'Recall per class: {recall}')
     #print(f'F1-score per class: {f1_scores}')
@@ -305,7 +305,7 @@ def validate(model, dataloader):
 
 # Define the grid for hyperparameters
 step_sizes = [10]
-learning_rates = [1e-4]
+learning_rates = [.8e-4, .9e-4, 1e-4, 1.2e-4]
 max_norms = [2]
 weight_decays = [5e-7]
 fcdropouts = [.5]
@@ -376,7 +376,7 @@ for step_size in step_sizes:
                                         #print(f'\nStep size = {step_size}')
                                         #print(f'Learning rate = {learning_rate}')
                                         #print(f'Max norm for gradients clipping = {max_norm}')
-                                        print(f'Weight_decay = {weight_decay}')
+                                        #print(f'Weight_decay = {weight_decay}')
                                         #print(f'FC droput = {dropout}')
                                         #print(f'Batch size = {batch_size}')
                                         #print(f'Transformer layers = {transformer_layers}')
