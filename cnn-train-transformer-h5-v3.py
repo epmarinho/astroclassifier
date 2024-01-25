@@ -45,10 +45,10 @@ viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
-galaxies = np.float32(1/226)
+galaxies = np.float32(1/190)
 globular = np.float32(1/109)
-nebulae  = np.float32(1/200)
-openclust= np.float32(1/117)
+nebulae  = np.float32(1/190)
+openclust= np.float32(1/124)
 ## run this before to have an actual class histogram (should be?)
 #galaxies = np.float32(1)
 #globular = np.float32(1)
