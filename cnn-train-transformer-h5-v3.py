@@ -5,7 +5,7 @@
 # Creation: Jul 12, 2023
 # Major changes: Jan 23, 2024
 
-DeterministicTraining = False
+DeterministicTraining = True
 if not DeterministicTraining:
     print('Non d', end='')
 else:
@@ -74,7 +74,6 @@ def init_weights(m):
         if m.bias is not None:
             init.constant_(m.bias, 0)
 
-
 # Swish unused yet
 class Swish(nn.Module):
     def __init__(self, beta=1.0):
@@ -126,7 +125,7 @@ if DeterministicTraining: torch.manual_seed(3908274)
 torch.backends.cudnn.deterministic = DeterministicTraining
 
 # Create data loaders
-train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=DeterministicTraining) # Carefully check adopting shuffle=False
+train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=not DeterministicTraining) # Carefully check adopting shuffle=False
 
 validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
@@ -153,16 +152,16 @@ num_classes = len(class_labels) # use num_classes as argument of CNN() and CNNTr
 print(f'Preset number of classes = {num_classes}')
 
 # Instantiate the CNN + Dense layer + Transformer
-cnn_model = CNN(cnn_out_dims, dense_dims, embedding_dimension, dropout=0.4, num_classes=num_classes)
+cnn_model = CNN(cnn_out_dims, dense_dims, embedding_dimension, dropout=0.3, num_classes=num_classes)
 
 # Instantiate the composed CNN+Transformer network
-model = CNNTransformer(cnn_model, num_heads=4, transformer_layers=1, num_dense_layers=0, embedding_dimension=embedding_dimension, num_classes=num_classes)
+model = CNNTransformer(cnn_model, num_heads=8, transformer_layers=1, num_dense_layers=2, embedding_dimension=embedding_dimension, num_classes=num_classes)
 
 # Training parameters
 
 num_epochs = 100
 
-initial_learning_rate = 1.4e-4
+initial_learning_rate = 1.2e-4
 
 # Define the loss function and optimizer
 loss_func = nn.CrossEntropyLoss(weight=class_weights)
@@ -326,9 +325,9 @@ class EarlyStoppingAccuracy:
         # Stop if the loss hasn't improved for 'patience' consecutive epochs
         return plateau_count >= self.patience
 
-early_stopping_batch = EarlyStoppingBatch(patience=40)
-early_stopping_valloss = EarlyStoppingValLoss(patience=10)
-early_stopping_accuracy = EarlyStoppingAccuracy(patience=5)
+early_stopping_batch = EarlyStoppingBatch(patience=20)
+early_stopping_valloss = EarlyStoppingValLoss(patience=20)
+early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
 
 # Restart all the network weights:
 model.apply(init_weights)
