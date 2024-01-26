@@ -5,7 +5,7 @@
 # Creation: Jul 12, 2023
 # Major changes: Jan 23, 2024
 
-DeterministicTraining = True
+DeterministicTraining = False
 if not DeterministicTraining:
     print('Non d', end='')
 else:
@@ -45,10 +45,10 @@ viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
-galaxies = np.float32(1/190)
+galaxies = np.float32(1/226)
 globular = np.float32(1/109)
-nebulae  = np.float32(1/190)
-openclust= np.float32(1/124)
+nebulae  = np.float32(1/200)
+openclust= np.float32(1/117)
 ## run this before to have an actual class histogram (should be?)
 #galaxies = np.float32(1)
 #globular = np.float32(1)
@@ -73,6 +73,7 @@ def init_weights(m):
         # Set biases to zero if they exist
         if m.bias is not None:
             init.constant_(m.bias, 0)
+
 
 # Swish unused yet
 class Swish(nn.Module):
@@ -152,7 +153,7 @@ num_classes = len(class_labels) # use num_classes as argument of CNN() and CNNTr
 print(f'Preset number of classes = {num_classes}')
 
 # Instantiate the CNN + Dense layer + Transformer
-cnn_model = CNN(cnn_out_dims, dense_dims, embedding_dimension, dropout=0.3, num_classes=num_classes)
+cnn_model = CNN(cnn_out_dims, dense_dims, embedding_dimension, dropout=0.4, num_classes=num_classes)
 
 # Instantiate the composed CNN+Transformer network
 model = CNNTransformer(cnn_model, num_heads=8, transformer_layers=1, num_dense_layers=2, embedding_dimension=embedding_dimension, num_classes=num_classes)
@@ -325,9 +326,9 @@ class EarlyStoppingAccuracy:
         # Stop if the loss hasn't improved for 'patience' consecutive epochs
         return plateau_count >= self.patience
 
-early_stopping_batch = EarlyStoppingBatch(patience=20)
-early_stopping_valloss = EarlyStoppingValLoss(patience=20)
-early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
+early_stopping_batch = EarlyStoppingBatch(patience=40)
+early_stopping_valloss = EarlyStoppingValLoss(patience=10)
+early_stopping_accuracy = EarlyStoppingAccuracy(patience=5)
 
 # Restart all the network weights:
 model.apply(init_weights)

@@ -305,12 +305,12 @@ def validate(model, dataloader):
 
 # Define the grid for hyperparameters
 step_sizes = [10]
-learning_rates = [.8e-4, .9e-4, 1e-4, 1.2e-4]
-max_norms = [2]
-weight_decays = [5e-7]
-fcdropouts = [.5]
+learning_rates = [1.2e-4]
+max_norms = [1, 2]
+weight_decays = [4e-7, 5e-7, 6e-7]
+fcdropouts = [.3]
 batch_sizes = [16]
-transformer_layers_options = [1]
+transformer_layers_options = [2]
 num_dense_layers_options = [2]
 num_heads_options = [8]
 embedding_dimensions = [128]
