@@ -305,10 +305,10 @@ def validate(model, dataloader):
 
 # Define the grid for hyperparameters
 step_sizes = [10]
-learning_rates = [1.2e-4]
-max_norms = [1, 2]
-weight_decays = [4e-7, 5e-7, 6e-7]
-fcdropouts = [.3]
+learning_rates = [9e-5, 8e-5]
+max_norms = [3, 4]
+weight_decays = [5e-7, 6e-7]
+fcdropouts = [.3, .25]
 batch_sizes = [16]
 transformer_layers_options = [2]
 num_dense_layers_options = [2]
@@ -358,7 +358,7 @@ for step_size in step_sizes:
                                         viz.reset_x_axis('Precision')
                                         viz.reset_x_axis('Recall')
                                         viz.reset_x_axis('F1-scores')
-                                        viz.reset_x_axis('Specificity-scores')
+                                        viz.reset_x_axis('Specificity')
 
                                         # Ensuring reproducibility by setting a fixed seed and deterministic behavior.
                                         torch.manual_seed(3908274)

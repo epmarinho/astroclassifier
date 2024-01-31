@@ -35,10 +35,10 @@ cnn_out_dims = [cnn_out_dim // 8, cnn_out_dim // 4, cnn_out_dim // 2, cnn_out_di
 # cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers # The best for unsorted astronomical image classification
 
 # Instantiate the CNN + Dense layer + Transformer
-cnn_model = CNN(cnn_out_dims, dense_dims, embedding_dimension, dropout=0.4)
+cnn_model = CNN(cnn_out_dims, dense_dims, embedding_dimension, dropout=0.3)
 
 # Instantiate the composed CNN+Transformer network
-model = CNNTransformer(cnn_model, num_heads=8, transformer_layers=1, num_dense_layers=2, embedding_dimension=embedding_dimension)
+model = CNNTransformer(cnn_model, num_heads=8, transformer_layers=2, num_dense_layers=2, embedding_dimension=embedding_dimension)
 
 # Load the saved model parameters
 saved_model_path = 'trained_cnn_model.pth'
