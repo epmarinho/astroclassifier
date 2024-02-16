@@ -309,11 +309,11 @@ step_sizes = [10]
 learning_rates = [8e-5]
 max_norms = [3]
 weight_decays = [6e-7]
-batch_sizes = [16, 8]
+batch_sizes = [16]
 vit_depth_options = [14]
-vit_dims = [768, 800, 1000]
+vit_dims = [512, 600, 700]
 num_heads_options = [8]
-mlp_dims = [1024, 1200, 1400]
+mlp_dims = [1024]
 
 #print(f'\nStep sizes = {step_sizes}')
 #print(f'learning rates = {learning_rates}')
@@ -330,34 +330,45 @@ best_accuracy = 0  # Track the best accuracy
 best_hyperparameters = None  # Track the best hyperparameters
 
 ''' Here it is defined the training grid for the parameter sets above '''
-
+first = True
 # Outer loops for hyperparameter tuning. Each loop iterates over a range of values for a specific hyperparameter.
 for step_size in step_sizes:
+    print(f'step size = {step_size}')
     for learning_rate in learning_rates:
+        print(f'learning rate = {learning_rate}')
         for max_norm in max_norms:
+            print(f'Max norm for gradients clipping = {max_norm}')
             for weight_decay in weight_decays:
+                print(f'weight decay = {weight_decay}')
                 # Inner loops for batch size variations. This affects memory usage, hence the careful handling.
                 for batch_size in batch_sizes:
+                    print(f'batch size = {batch_size}')
                     # Initialize data loaders with the current batch size for training and validation datasets.
                     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
                     validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
                     # Iterate over different transformer architecture configurations.
                     for vit_dim in vit_dims:
+                        print(f'ViT dimension = {vit_dim}')
                         for vit_depth in vit_depth_options:
+                            print(f'ViT depth = {vit_depth}')
                             for num_heads in num_heads_options:
+                                print(f'number of heads = {num_heads}')
                                 for mlp_dim in mlp_dims:
-
-                                    # Reset visualization environment and metrics for each configuration.
-                                    vis.delete_env('Astro Classifier')
-                                    vis.close()
-                                    viz.reset_x_axis('Batch Loss')
-                                    viz.reset_x_axis('Validation Loss')
-                                    viz.reset_x_axis('Validation Accuracy')
-                                    viz.reset_x_axis('Precision')
-                                    viz.reset_x_axis('Recall')
-                                    viz.reset_x_axis('F1-scores')
-                                    viz.reset_x_axis('Specificity')
+                                    print(f'MLP dimension = {mlp_dim}')
+                                    if not first:
+                                        # Reset visualization environment and metrics for each configuration.
+                                        vis.delete_env('Astro Classifier')
+                                        vis.close()
+                                        viz.reset_x_axis('Batch Loss')
+                                        viz.reset_x_axis('Validation Loss')
+                                        viz.reset_x_axis('Validation Accuracy')
+                                        viz.reset_x_axis('Precision')
+                                        viz.reset_x_axis('Recall')
+                                        viz.reset_x_axis('F1-scores')
+                                        viz.reset_x_axis('Specificity')
+                                    else:
+                                        first = False
 
                                     # Ensuring reproducibility by setting a fixed seed and deterministic behavior.
                                     torch.manual_seed(3908274)
@@ -414,9 +425,9 @@ for step_size in step_sizes:
                                     scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=False)
 
                                     # Set up early stopping mechanisms based on different performance metrics.
-                                    early_stopping_batch = EarlyStoppingBatch(patience=20)
-                                    early_stopping_valloss = EarlyStoppingValLoss(patience=20)
-                                    early_stopping_accuracy = EarlyStoppingAccuracy(patience=20)
+                                    early_stopping_batch = EarlyStoppingBatch(patience=40)
+                                    early_stopping_valloss = EarlyStoppingValLoss(patience=10)
+                                    early_stopping_accuracy = EarlyStoppingAccuracy(patience=5)
 
                                     # Training and validation loop with exception handling for memory issues.
                                     try:
