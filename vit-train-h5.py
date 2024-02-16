@@ -136,7 +136,7 @@ train(model, train_loader, validation_loader, criterion, optimizer, num_epochs)
 test(model, validation_loader)
 
 # Save the trained model
-saved_model_path = 'trained_cnn_model_vit.pth'
+saved_model_path = 'trained_vit_model.pth'
 torch.save(model.state_dict(), saved_model_path)
 print(f"Trained model saved to '{saved_model_path}'")
 

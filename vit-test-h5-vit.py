@@ -19,7 +19,7 @@ from vit_core_h5 import model as loaded_model
 # from vit_core_h5 import transform
 
 # Load the saved model parameters
-saved_model_path = 'trained_cnn_model_vit.pth'
+saved_model_path = 'trained_vit_model.pth'
 loaded_model.load_state_dict(torch.load(saved_model_path))
 
 # Move the model to the same device as the input
