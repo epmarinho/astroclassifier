@@ -436,17 +436,6 @@ for step_size in step_sizes:
                                         best_hyperparameters = (step_size, learning_rate, max_norm, weight_decay, batch_size, vit_depth, vit_dim, num_heads, mlp_dim)
                                         #                           0            1           2             3          4          5         6          7         8
                                         print(f'\nBest accuracy by now = {best_accuracy}\n')
-#step_sizes = [10]
-#learning_rates = [9e-5, 8e-5]
-#max_norms = [3, 4]
-#weight_decays = [5e-7, 6e-7]
-#batch_sizes = [16]
-#vit_dims = [768]
-#vit_depth_options = [14]
-#num_heads_options = [8, 16]
-#mlp_dims = [1024]
-
-# End of all hyperparameter tuning loops.
 
 # Print out the best hyperparameter set and its performance
 print('\nBest Hyperparameters:')

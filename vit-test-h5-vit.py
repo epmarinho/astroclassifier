@@ -13,10 +13,10 @@ from PIL import Image
 import pillow_avif
 from utils import Visualizer  # You should import your Visualizer module here
 import os
-from cnn_transformer_core_h5_vit import img_width as imgw
-from cnn_transformer_core_h5_vit import img_height as imgh
-from cnn_transformer_core_h5_vit import model as loaded_model
-# from cnn_transformer_core_h5_vit import transform
+from vit_core_h5 import img_width as imgw
+from vit_core_h5 import img_height as imgh
+from vit_core_h5 import model as loaded_model
+# from vit_core_h5 import transform
 
 # Load the saved model parameters
 saved_model_path = 'trained_cnn_model_vit.pth'
