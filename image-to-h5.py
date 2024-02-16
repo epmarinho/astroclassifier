@@ -49,7 +49,8 @@ def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
 
 # Image dimensions
 image_size = (256,256)
-crop_size = (224,224)
+#image_size = (224,224)
+#crop_size = (224,224)
 
 # Padd input images to the minimal square frame
 def pad_to_square(img):
@@ -116,7 +117,7 @@ transform_train = transforms.Compose([
     transforms.RandomHorizontalFlip(), # Randomly flip the image horizontally (left to right)
     transforms.RandomAdjustSharpness(sharpness_factor=4),
     transforms.Resize(image_size),
-    transforms.RandomCrop(crop_size),
+    #transforms.RandomCrop(crop_size),
     transforms.ToTensor(), # Convert the image to a PyTorch tensor
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]), # transformes color ranges from [0,1] to [-1,1]
     # transforms.Normalize(mean=train_mean, std=train_stddev) # This did not work

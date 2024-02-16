@@ -19,7 +19,7 @@ from cnn_transformer_core_h5_vit import model as loaded_model
 # from cnn_transformer_core_h5_vit import transform
 
 # Load the saved model parameters
-saved_model_path = 'trained_cnn_model.pth'
+saved_model_path = 'trained_cnn_model_vit.pth'
 loaded_model.load_state_dict(torch.load(saved_model_path))
 
 # Move the model to the same device as the input
@@ -29,11 +29,31 @@ loaded_model.to(device)
 # Set the model to evaluation mode
 loaded_model.eval()
 
-# # Transformations for preprocessing the input image - it might be different from transform within cnn_transformer_core
+# Padd input images to the minimal square frame
+def pad_to_square(img):
+    # Compute the difference between the longest and shortest side
+    w, h = img.size
+    diff = abs(h - w) // 2
+
+    # Determine padding for height and width
+    pad_h = diff if h <= w else 0
+    pad_w = diff if w < h else 0
+
+    # Return a new padded PIL image
+    return transforms.functional.pad(img, (pad_w, pad_h, pad_w, pad_h))
+
+# Transformations for preprocessing the input image - it might be different from transform within cnn_transformer_core
+#transform = transforms.Compose([
+    #transforms.Resize((imgw, imgh)),
+    #transforms.ToTensor(),                        # Convert the image to a PyTorch tensor
+    #transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize the image tensor
+#])
+image_size = (imgw, imgh)
 transform = transforms.Compose([
-    transforms.Resize((imgw, imgh)),
-    transforms.ToTensor(),                        # Convert the image to a PyTorch tensor
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize the image tensor
+    transforms.Lambda(pad_to_square), # Apply padding to maintain aspect ratio # Suggested by GPT-4
+    transforms.Resize(image_size),
+    transforms.ToTensor(), # Convert the image to a PyTorch tensor
+    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]), # transformes color ranges from [0,1] to [-1,1]
 ])
 
 # Replace 'class_labels' with your actual class labels

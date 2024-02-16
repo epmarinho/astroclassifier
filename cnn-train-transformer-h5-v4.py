@@ -296,7 +296,7 @@ def validate(model, dataloader):
     viz.plot_lines('Precision', precision)
     viz.plot_lines('Recall', recall)
     viz.plot_lines('F1-scores', f1_scores)
-    viz.plot_lines('Specificity-scores', specificity)
+    viz.plot_lines('Specificity', specificity)
 
     return validation_loss, accuracy
 
