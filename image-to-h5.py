@@ -49,6 +49,7 @@ def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
 
 # Image dimensions
 image_size = (256,256)
+#image_size = (224,224)
 #crop_size = (224,224)
 
 # Padd input images to the minimal square frame

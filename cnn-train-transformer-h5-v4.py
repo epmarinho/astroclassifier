@@ -36,10 +36,10 @@ vis = visdom.Visdom()
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:
-galaxies = np.float32(1/226)
+galaxies = np.float32(1/190)
 globular = np.float32(1/109)
-nebulae  = np.float32(1/200)
-openclust= np.float32(1/117)
+nebulae  = np.float32(1/190)
+openclust= np.float32(1/124)
 # # run this before to have an actual class histogram
 # galaxies = np.float32(1)
 # globular = np.float32(1)
@@ -286,7 +286,7 @@ def validate(model, dataloader):
         f1_scores.append(f1_i)
         specificity.append(specificity_i)
 
-    print(f'Validation Loss: {validation_loss:.6f}, Validation Accuracy: {accuracy:.2f}%')
+    #print(f'Validation Loss: {validation_loss:.6f}, Validation Accuracy: {accuracy:.2f}%')
     #print(f'Precision per class: {precision}')
     #print(f'Recall per class: {recall}')
     #print(f'F1-score per class: {f1_scores}')
@@ -296,7 +296,7 @@ def validate(model, dataloader):
     viz.plot_lines('Precision', precision)
     viz.plot_lines('Recall', recall)
     viz.plot_lines('F1-scores', f1_scores)
-    viz.plot_lines('Specificity-scores', specificity)
+    viz.plot_lines('Specificity', specificity)
 
     return validation_loss, accuracy
 
@@ -309,8 +309,9 @@ learning_rates = [1e-4, 1e-5]
 max_norms = [2, 3]
 weight_decays = [5e-7, 1e-7]
 fcdropouts = [.5, .3]
+fcdropouts = [.3, .25]
 batch_sizes = [16]
-transformer_layers_options = [1]
+transformer_layers_options = [2]
 num_dense_layers_options = [2]
 num_heads_options = [8]
 embedding_dimensions = [128]
@@ -358,7 +359,7 @@ for step_size in step_sizes:
                                         viz.reset_x_axis('Precision')
                                         viz.reset_x_axis('Recall')
                                         viz.reset_x_axis('F1-scores')
-                                        viz.reset_x_axis('Specificity-scores')
+                                        viz.reset_x_axis('Specificity')
 
                                         # Ensuring reproducibility by setting a fixed seed and deterministic behavior.
                                         torch.manual_seed(3908274)
@@ -376,7 +377,7 @@ for step_size in step_sizes:
                                         #print(f'\nStep size = {step_size}')
                                         #print(f'Learning rate = {learning_rate}')
                                         #print(f'Max norm for gradients clipping = {max_norm}')
-                                        print(f'Weight_decay = {weight_decay}')
+                                        #print(f'Weight_decay = {weight_decay}')
                                         #print(f'FC droput = {dropout}')
                                         #print(f'Batch size = {batch_size}')
                                         #print(f'Transformer layers = {transformer_layers}')
