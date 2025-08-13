@@ -110,7 +110,7 @@ jedi==0.18.0
 jeepney==0.7.1
 Jinja2==3.1.2
 jmespath==0.10.0
-joblib==0.17.0
+joblib==1.2.0
 jsonpatch==1.33
 jsonpointer==2.4
 jsonschema==3.2.0
