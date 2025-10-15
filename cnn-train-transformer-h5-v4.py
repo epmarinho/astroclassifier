@@ -402,9 +402,9 @@ for step_size in step_sizes:
                                         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
                                         # Configure schedulers for dynamic learning rate adjustment.
-                                        scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=0.5, verbose=False)
-                                        scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, verbose=True)
-                                        scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=False)
+                                        scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=0.5)
+                                        scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5)
+                                        scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
                                         # Set up early stopping mechanisms based on different performance metrics.
                                         early_stopping_batch = EarlyStoppingBatch(patience=20)
